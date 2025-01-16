@@ -1,246 +1,244 @@
 <template>
-  <div class="lot-container">
-    <canvas ref="canvasRef"></canvas>
+  <div class="lot-tube" @click="handleScreenClick">
+    <Transition name="fade">
+      <button v-if="!isStarted && !selectedIndex" class="start-button" @click.stop="handleStart">开始抽签</button>
+    </Transition>
+    
+    <Transition name="fade">
+      <div v-if="isStarted && !selectedIndex" class="papers-container">
+        <!-- 后半部分筒子 -->
+        <svg class="barrel-back" :class="{ shaking: isShaking }" viewBox="-20 -20 240 440" width="660" height="380">
+          <!-- 后半部分筒身 -->
+          <path class="barrel-body" d="M10,20 C10,-15 190,-15 190,20 L190,360 C190,380 10,380 10,360 Z" 
+                fill="#8B2500" stroke="#3E2723" stroke-width="2"/>
+          <!-- 后半部分上边缘 -->
+          <path d="M10,20 C10,-15 190,-15 190,20" 
+                fill="none" stroke="#3E2723" stroke-width="2"/>
+          <!-- 后半部分下边缘 -->
+          <path d="M10,360 C10,380 190,380 190,360" 
+                fill="none" stroke="#3E2723" stroke-width="2"/>
+        </svg>
+
+        <!-- 前半部分筒子 -->
+        <svg class="barrel-front" :class="{ shaking: isShaking }" viewBox="-20 30 240 420" width="770" height="380">
+          <!-- 前半部分筒身 -->
+          <path class="barrel-body" d="M10,20 C10,55 190,55 190,20 L190,360 C190,380 10,380 10,360 Z" 
+                fill="#8B2500"/>
+          <!-- 前半部分上边缘 -->
+          <path d="M10,20 C10,55 190,55 190,20" 
+                fill="none"/>
+          <!-- 前半部分下边缘 -->
+          <path d="M10,360 C10,380 190,380 190,360" 
+                fill="none"/>
+        </svg>
+
+        <!-- 签子 -->
+        <div v-for="i in 8" :key="i-1"
+             :class="['paper', `paper-${i}`, { 
+               shaking: isShaking && selectedIndex !== i-1, 
+               selected: selectedIndex === i-1 
+             }]"
+             @click="handleSelect(i-1)">
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import * as THREE from 'three'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
-  isShaking: Boolean
+  onSelect: {
+    type: Function,
+    required: true
+  },
+  isStarted: {
+    type: Boolean,
+    required: true
+  }
 })
 
-const canvasRef = ref(null)
-let scene, camera, renderer, tube
-let animationFrameId = null
-let initialRotation = 0
+const emit = defineEmits(['reset', 'start'])
+const selectedIndex = ref(null)
+const isShaking = ref(false)
 
-// 创建木质纹理
-const createWoodTexture = () => {
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')
-  canvas.width = 1024  // 增加纹理分辨率
-  canvas.height = 1024
-
-  // 基础颜色
-  ctx.fillStyle = '#8B0000'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-  // 添加木纹
-  for (let i = 0; i < 100; i++) {  // 增加木纹数量
-    ctx.beginPath()
-    ctx.strokeStyle = `rgba(80, 0, 0, ${Math.random() * 0.2})`
-    ctx.lineWidth = Math.random() * 3 + 1
-    
-    const y = Math.random() * canvas.height
-    ctx.moveTo(0, y)
-    
-    let x = 0
-    while (x < canvas.width) {
-      x += Math.random() * 20
-      const newY = y + (Math.random() - 0.5) * 20
-      ctx.lineTo(x, newY)
-    }
-    ctx.stroke()
+watch(() => props.isStarted, (newValue) => {
+  if (!newValue) {
+    return
   }
-
-  // 添加更多细节
-  for (let i = 0; i < 2000; i++) {
-    const x = Math.random() * canvas.width
-    const y = Math.random() * canvas.height
-    const radius = Math.random() * 2 + 1
-    ctx.beginPath()
-    ctx.fillStyle = `rgba(60, 0, 0, ${Math.random() * 0.3})`
-    ctx.arc(x, y, radius, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.wrapS = THREE.RepeatWrapping
-  texture.wrapT = THREE.RepeatWrapping
-  texture.repeat.set(2, 1)
-  texture.anisotropy = 16  // 增加各向异性过滤
-  return texture
-}
-
-// 创建单个签子的几何体 - 调整签子尺寸
-const createLotGeometry = () => {
-  const shape = new THREE.Shape()
-  // 创建更小的五边形横截面
-  shape.moveTo(-0.03, 0)      // 左下
-  shape.lineTo(-0.02, 0.08)   // 左上
-  shape.lineTo(0, 0.1)        // 顶点
-  shape.lineTo(0.02, 0.08)    // 右上
-  shape.lineTo(0.03, 0)       // 右下
-  shape.lineTo(-0.03, 0)      // 闭合
-
-  const extrudeSettings = {
-    depth: 6.8,              // 签子长度略小于筒内高度
-    bevelEnabled: true,
-    bevelThickness: 0.01,
-    bevelSize: 0.01,
-    bevelSegments: 3
-  }
-
-  return new THREE.ExtrudeGeometry(shape, extrudeSettings)
-}
-
-// 创建签筒
-const createTube = () => {
-  const woodTexture = createWoodTexture()
-  
-  // 创建空心圆柱体组
-  const tubeGroup = new THREE.Group()
-  
-  // 外筒
-  const outerGeometry = new THREE.CylinderGeometry(2, 2, 6, 128)
-  const outerMaterial = new THREE.MeshPhongMaterial({
-    map: woodTexture,
-    bumpMap: woodTexture,
-    bumpScale: 0.1,
-    shininess: 30,
-    specular: 0x333333,
-    side: THREE.DoubleSide
-  })
-  const outerTube = new THREE.Mesh(outerGeometry, outerMaterial)
-  
-  // 内筒
-  const innerGeometry = new THREE.CylinderGeometry(1.8, 1.8, 6.2, 128)
-  const innerMaterial = new THREE.MeshPhongMaterial({
-    color: 0x000000,
-    side: THREE.BackSide
-  })
-  const innerTube = new THREE.Mesh(innerGeometry, innerMaterial)
-  
-  tubeGroup.add(outerTube)
-  tubeGroup.add(innerTube)
-  
-  // 添加筒口装饰
-  const rimGeometry = new THREE.TorusGeometry(2.1, 0.2, 32, 128)
-  const rimMaterial = new THREE.MeshPhongMaterial({
-    color: 0x8B0000,
-    shininess: 50,
-    specular: 0x666666
-  })
-  
-  const topRim = new THREE.Mesh(rimGeometry, rimMaterial)
-  topRim.position.y = 3
-  topRim.rotation.x = Math.PI / 2
-  
-  const bottomRim = topRim.clone()
-  bottomRim.position.y = -3
-  
-  tubeGroup.add(topRim)
-  tubeGroup.add(bottomRim)
-
-  tube = tubeGroup
-  scene.add(tube)
-}
-
-// 初始化场景
-const init = () => {
-  scene = new THREE.Scene()
-  scene.background = new THREE.Color(0xFFE4B5)
-
-  camera = new THREE.PerspectiveCamera(
-    75,
-    canvasRef.value.clientWidth / canvasRef.value.clientHeight,
-    0.1,
-    1000
-  )
-  
-  // 调整相机位置，使其从上方俯视
-  camera.position.set(0, 12, 8)  // 改变相机位置
-  camera.lookAt(0, 0, 0)        // 看向原点
-
-  renderer = new THREE.WebGLRenderer({
-    canvas: canvasRef.value,
-    antialias: true,
-    alpha: true,
-    powerPreference: "high-performance"
-  })
-  
-  renderer.setPixelRatio(window.devicePixelRatio)
-  renderer.setSize(canvasRef.value.clientWidth, canvasRef.value.clientHeight, false)
-  renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
-
-  // 增强光照效果
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
-  scene.add(ambientLight)
-
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-  directionalLight.position.set(5, 8, 5)  // 调整主光源位置
-  directionalLight.castShadow = true
-  scene.add(directionalLight)
-
-  // 调整点光源位置
-  const pointLight = new THREE.PointLight(0xffccaa, 0.8)
-  pointLight.position.set(-5, 5, 2)
-  scene.add(pointLight)
-
-  createTube()
-}
-
-// 动画循环
-const animate = () => {
-  animationFrameId = requestAnimationFrame(animate)
-
-  if (props.isShaking) {
-    // 摇晃动画
-    const shakeAmount = 0.2
-    tube.rotation.z = initialRotation + Math.sin(Date.now() * 0.02) * shakeAmount
-  } else {
-    // 平滑回到初始位置
-    tube.rotation.z *= 0.95
-  }
-
-  renderer.render(scene, camera)
-}
-
-// 处理窗口大小变化
-const handleResize = () => {
-  if (!canvasRef.value) return
-  
-  const width = canvasRef.value.clientWidth
-  const height = canvasRef.value.clientHeight
-  
-  camera.aspect = width / height
-  camera.updateProjectionMatrix()
-  
-  renderer.setSize(width, height, false)
-  renderer.setPixelRatio(window.devicePixelRatio)
-}
-
-onMounted(() => {
-  init()
-  animate()
-  window.addEventListener('resize', handleResize)
+  selectedIndex.value = null
+  isShaking.value = false
 })
 
-onBeforeUnmount(() => {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId)
-  }
-  window.removeEventListener('resize', handleResize)
-})
+const handleStart = () => {
+  emit('start')
+}
+
+const handleSelect = (index) => {
+  if (selectedIndex.value !== null || isShaking.value) return
+  isShaking.value = true
+  
+  setTimeout(() => {
+    isShaking.value = false
+    setTimeout(() => {
+      selectedIndex.value = index
+      setTimeout(() => {
+        props.onSelect(index)
+      }, 1500)
+    }, 100)
+  }, 1000)
+}
+
+const handleScreenClick = () => {
+  if (!props.isStarted || selectedIndex.value !== null || isShaking.value) return
+  const randomIndex = Math.floor(Math.random() * 8)
+  handleSelect(randomIndex)
+}
 </script>
 
 <style scoped>
-.lot-container {
-  width: 100%;
-  height: 600px;
-  margin: 0 auto;
+.lot-tube {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
+  min-height: 800px;
+  margin-top: -200px;
 }
 
-canvas {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 800px;
+.start-button {
+  padding: 12px 24px;
+  font-size: 18px;
+  background-color: #f0c14b;
+  border: 1px solid #a88734;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.start-button:hover {
+  background-color: #f4d078;
+}
+
+.papers-container {
+  position: relative;
+  width: 1000px;
+  height: 1000px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+}
+
+.barrel-back {
+  position: absolute;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%) scale(1.1);
+  z-index: 0;
+  opacity: 1;
+  margin-bottom: 20px;
+}
+
+.barrel-front {
+  position: absolute;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  opacity: 1;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.barrel-body {
+  filter: none;
+}
+
+.paper {
+  position: absolute;
+  width: 80px;
+  height: 320px;
+  background-color: #FFE4B5;
+  border: 1px solid #DEB887;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  bottom: 120px;
+  transform: var(--initial-transform);
+  z-index: var(--z-index, 1);
+  will-change: transform;
+}
+
+.paper:hover {
+  transform: var(--hover-transform);
+}
+
+.paper-1 { --initial-transform: translateX(-35px) rotate(-12deg); --hover-transform: translateX(-35px) rotate(-12deg) translateY(-20px); z-index: 1; }
+.paper-2 { --initial-transform: translateX(-25px) rotate(-8deg); --hover-transform: translateX(-25px) rotate(-8deg) translateY(-20px); z-index: 2; }
+.paper-3 { --initial-transform: translateX(-15px) rotate(-4deg); --hover-transform: translateX(-15px) rotate(-4deg) translateY(-20px); z-index: 3; }
+.paper-4 { --initial-transform: translateX(-5px) rotate(-2deg); --hover-transform: translateX(-5px) rotate(-2deg) translateY(-20px); z-index: 4; }
+.paper-5 { --initial-transform: translateX(5px) rotate(2deg); --hover-transform: translateX(5px) rotate(2deg) translateY(-20px); z-index: 5; }
+.paper-6 { --initial-transform: translateX(15px) rotate(4deg); --hover-transform: translateX(15px) rotate(4deg) translateY(-20px); z-index: 6; }
+.paper-7 { --initial-transform: translateX(25px) rotate(8deg); --hover-transform: translateX(25px) rotate(8deg) translateY(-20px); z-index: 7; }
+.paper-8 { --initial-transform: translateX(35px) rotate(12deg); --hover-transform: translateX(35px) rotate(12deg) translateY(-20px); z-index: 8; }
+
+@keyframes shakeBarrel {
+  0%, 100% { transform: translateX(-50%) scale(1.1) translateY(0); }
+  25% { transform: translateX(-50%) scale(1.1) translateY(-15px); }
+  75% { transform: translateX(-50%) scale(1.1) translateY(15px); }
+}
+
+@keyframes shakeBarrelFront {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  25% { transform: translateX(-50%) translateY(-15px); }
+  75% { transform: translateX(-50%) translateY(15px); }
+}
+
+@keyframes shakePapers {
+  0%, 100% { transform: var(--initial-transform) translateY(0); }
+  25% { transform: var(--initial-transform) translateY(-40px); }
+  75% { transform: var(--initial-transform) translateY(40px); }
+}
+
+@keyframes flyAway {
+  0% { transform: var(--initial-transform); }
+  15% { transform: var(--initial-transform) translateY(-50px); }
+  30% { transform: var(--initial-transform) translateY(-150px); }
+  100% { transform: var(--initial-transform) translateY(-2000px); }
+}
+
+.barrel-back.shaking {
+  animation: shakeBarrel 0.2s ease-in-out infinite;
+}
+
+.barrel-front.shaking {
+  animation: shakeBarrelFront 0.2s ease-in-out infinite;
+}
+
+.paper.shaking {
+  animation: shakePapers 0.2s ease-in-out infinite;
+}
+
+.paper.selected {
+  animation: flyAway 2s ease-out forwards !important;
+  z-index: 500 !important;
+  opacity: 1 !important;
+  animation-delay: 0s !important;
+}
+
+.paper.selected.shaking {
+  animation: flyAway 2s ease-out forwards !important;
 }
 </style> 

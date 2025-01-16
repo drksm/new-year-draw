@@ -1,119 +1,151 @@
 <template>
-  <Suspense>
-    <template #default>
-      <div class="draw-lot-view">
-        <LotTube :is-shaking="isShaking" />
-        <LotDetailModal 
-          v-if="showDetail"
-          :should-burn="false"
-          @burn-complete="handleBurnComplete"
-        >
-          <div class="lot-content">
-            <div class="lot-number">{{ currentLot?.number }}</div>
-            <div class="lot-text">{{ currentLot?.content }}</div>
-          </div>
-        </LotDetailModal>
-        <LotButtons 
-          :drawn-number="currentLot?.id"
-          :is-shaking="isShaking"
-          :is-resetting="false"
-          @start="startDraw"
-          @interpret="showInterpretation"
-          @reset="handleReset"
-        />
-        <InterpretationModal
-          v-if="showInterpretationModal"
-          :interpretation="interpretation"
-          @close="showInterpretationModal = false"
-        />
+  <div class="draw-lot-view">
+    <LotTube 
+      :onSelect="handleLotSelect"
+      :isStarted="isStarted"
+      @reset="handleReset"
+      @start="handleStart"
+    />
+    
+    <Transition name="fade">
+      <div v-if="selectedLot" class="action-buttons">
+        <button class="action-button interpret" @click="handleShowInterpretation">解签</button>
+        <button class="action-button redraw" @click="handleReset">再抽一次</button>
       </div>
-    </template>
-    <template #fallback>
-      <div class="loading">
-        Loading...
-      </div>
-    </template>
-  </Suspense>
+    </Transition>
+    
+    <Transition name="fade">
+      <LotDetailModal
+        v-if="showDetail"
+        :lot="selectedLot"
+        @close="handleCloseDetail"
+      />
+    </Transition>
+    
+    <Transition name="fade">
+      <InterpretationModal
+        v-if="showInterpretation"
+        :lot="selectedLot"
+        :interpretation="interpretation"
+        @close="handleCloseInterpretation"
+      />
+    </Transition>
+  </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import LotTube from '../components/LotTube.vue'
-import LotButtons from '@/components/LotButtons.vue'
-import LotDetailModal from '@/components/LotDetailModal.vue'
-import InterpretationModal from '@/components/InterpretationModal.vue'
-import { drawLot, interpretLot } from '@/api/lotService'
+import LotDetailModal from '../components/LotDetailModal.vue'
+import InterpretationModal from '../components/InterpretationModal.vue'
+import { drawLot, interpretLot } from '../api/lotService'
 
-const isShaking = ref(false)
-const currentLot = ref(null)
 const showDetail = ref(false)
-const showInterpretationModal = ref(false)
+const showInterpretation = ref(false)
+const selectedLot = ref(null)
 const interpretation = ref(null)
+const isStarted = ref(false)
 
-const startDraw = async () => {
-  if (isShaking.value) return
-  isShaking.value = true
-  
+const handleLotSelect = async (index) => {
   try {
+    isStarted.value = false  // 隐藏黄纸
+    // 调用抽签接口
     const result = await drawLot()
-    currentLot.value = result
+    selectedLot.value = result
     showDetail.value = true
   } catch (error) {
-    console.error('抽签失败:', error)
-  } finally {
-    isShaking.value = false
+    console.error('Failed to draw lot:', error)
   }
+}
+
+const handleCloseDetail = () => {
+  showDetail.value = false
+}
+
+const handleShowInterpretation = async () => {
+  try {
+    const result = await interpretLot(selectedLot.value.id)
+    interpretation.value = result
+    showInterpretation.value = true
+  } catch (error) {
+    console.error('Failed to get interpretation:', error)
+  }
+}
+
+const handleCloseInterpretation = () => {
+  showInterpretation.value = false
+  interpretation.value = null
+}
+
+const handleStart = () => {
+  isStarted.value = true
+  selectedLot.value = null
+  interpretation.value = null
+  showDetail.value = false
+  showInterpretation.value = false
 }
 
 const handleReset = () => {
-  // 只重置状态，不自动开始新的抽签
+  isStarted.value = true
+  selectedLot.value = null
+  interpretation.value = null
   showDetail.value = false
-  currentLot.value = null
-}
-
-const showInterpretation = async () => {
-  if (!currentLot.value?.id) return
-  
-  try {
-    const result = await interpretLot(currentLot.value.id)
-    interpretation.value = result
-    showInterpretationModal.value = true
-  } catch (error) {
-    console.error('解签失败:', error)
-    alert('解签失败，请稍后重试')
-  }
+  showInterpretation.value = false
 }
 </script>
 
 <style scoped>
-.draw-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+.draw-lot-view {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(to bottom, #FFE4B5, #FFB6C1);
-  overflow: hidden;
-}
-
-.lot-content {
-  text-align: center;
-  color: #8B4513;
   padding: 20px;
+  background: linear-gradient(135deg, #fff5e6 0%, #fff9f0 100%);
 }
 
-.lot-number {
-  font-size: 1.5rem;
-  margin-bottom: 15px;
-  font-weight: bold;
+.action-buttons {
+  display: flex;
+  gap: 16px;
+  margin-top: 20px;
 }
 
-.lot-text {
-  font-size: 1.2rem;
-  line-height: 1.6;
+.action-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-button.interpret {
+  background-color: #4CAF50;
+  border: 1px solid #388E3C;
+  color: white;
+}
+
+.action-button.interpret:hover {
+  background-color: #45a049;
+}
+
+.action-button.redraw {
+  background-color: #2196F3;
+  border: 1px solid #1976D2;
+  color: white;
+}
+
+.action-button.redraw:hover {
+  background-color: #1e88e5;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style> 
