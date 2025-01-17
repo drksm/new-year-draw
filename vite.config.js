@@ -17,5 +17,14 @@ export default defineConfig({
         assetFileNames: 'assets/[name][extname]'
       }
     }
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://www.klabers.cn',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 }) 

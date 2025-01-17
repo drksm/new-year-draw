@@ -70,14 +70,35 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMusicStore } from '@/stores/musicStore'
+import { useAuthStore } from '../stores/authStore'
+import { login } from '../api/authService'
+import LoadingClock from './LoadingClock.vue'
 
 const router = useRouter()
 const progress = ref(0)
 const store = useMusicStore()
+const authStore = useAuthStore()
+const isLoading = ref(true)
+
+const handleLogin = async () => {
+  try {
+    console.log('Starting login...')
+    const token = await login()
+    console.log('Login successful, token:', token)
+    if (!token) {
+      throw new Error('No token received from login')
+    }
+    authStore.setToken(token)
+    console.log('Token stored in authStore:', authStore.token)
+  } catch (error) {
+    console.error('Login error:', error)
+    throw error // 向上传播错误
+  }
+}
 
 const startLoading = () => {
-  const totalTime = 3000 // 3秒
-  const intervalTime = 50 // 每50ms更新一次
+  const totalTime = 3000
+  const intervalTime = 50
   const steps = totalTime / intervalTime
   const increment = 100 / steps
 
@@ -95,8 +116,16 @@ const enterSite = () => {
   router.replace({ name: 'draw' })
 }
 
-onMounted(() => {
-  startLoading()
+onMounted(async () => {
+  try {
+    await handleLogin()
+    startLoading()
+    setTimeout(() => {
+      isLoading.value = false
+    }, 2000)
+  } catch (error) {
+    console.error('Failed to initialize:', error)
+  }
 })
 </script>
 
