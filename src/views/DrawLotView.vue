@@ -45,6 +45,7 @@ const showInterpretation = ref(false)
 const selectedLot = ref(null)
 const interpretation = ref(null)
 const isStarted = ref(false)
+const interpretationCache = ref(new Map())
 
 const handleLotSelect = async (index) => {
   try {
@@ -64,9 +65,25 @@ const handleCloseDetail = () => {
 
 const handleShowInterpretation = async () => {
   try {
-    const result = await interpretLot(selectedLot.value.id)
-    interpretation.value = result
+    const lotId = selectedLot.value.id
+    
+    // 检查缓存
+    if (interpretationCache.value.has(lotId)) {
+      interpretation.value = interpretationCache.value.get(lotId)
+      showInterpretation.value = true
+      return
+    }
+
+    // 首次请求
+    interpretation.value = ''
     showInterpretation.value = true
+    
+    await interpretLot(selectedLot.value.content, (text) => {
+      interpretation.value = text
+    })
+
+    // 缓存结果
+    interpretationCache.value.set(lotId, interpretation.value)
   } catch (error) {
     console.error('Failed to get interpretation:', error)
   }
@@ -74,7 +91,6 @@ const handleShowInterpretation = async () => {
 
 const handleCloseInterpretation = () => {
   showInterpretation.value = false
-  interpretation.value = null
 }
 
 const handleStart = () => {
@@ -91,6 +107,7 @@ const handleReset = () => {
   interpretation.value = null
   showDetail.value = false
   showInterpretation.value = false
+  interpretationCache.value.clear()
 }
 </script>
 
