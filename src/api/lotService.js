@@ -29,35 +29,27 @@ export const drawLot = async () => {
   }
 }
 
-export const interpretLot = async (content, onProgress) => {
-  return new Promise((resolve, reject) => {
-    const authStore = useAuthStore()
-    const xhr = new XMLHttpRequest()
-    
-    xhr.open('POST', '/api/aigc/stream/chat/')
-    xhr.setRequestHeader('Content-Type', 'application/json')
-    xhr.setRequestHeader('Authorization', `Bearer ${authStore.token}`)
-    
-    xhr.onprogress = (event) => {
-      const newText = event.target.responseText
-      if (newText) {
-        onProgress(newText)
-      }
+export const interpretLot = (content, onProgress) => {
+  const authStore = useAuthStore()
+  
+  // 创建一个新的 Worker 来处理 XHR 请求
+  const worker = new Worker(new URL('../workers/interpretWorker.js', import.meta.url))
+  
+  worker.onmessage = (event) => {
+    const { type, data } = event.data
+    if (type === 'progress') {
+      onProgress(data)
+    } else if (type === 'error') {
+      console.error('解签请求失败:', data)
+      onProgress('解签失败：' + data)
     }
-    
-    xhr.onerror = () => {
-      reject(new Error('解签失败：网络请求失败'))
-    }
-    
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(xhr.responseText)
-      } else {
-        reject(new Error('解签失败：' + xhr.statusText))
-      }
-    }
-    
-    const data = {
+  }
+
+  // 发送请求数据到 Worker
+  worker.postMessage({
+    url: '/api/aigc/stream/chat/',
+    token: authStore.token,
+    data: {
       messages: [
         {
           role: "system",
@@ -69,7 +61,13 @@ export const interpretLot = async (content, onProgress) => {
         }
       ]
     }
-    
-    xhr.send(JSON.stringify(data))
   })
+
+  // 返回控制对象
+  return {
+    abort: () => {
+      worker.terminate()
+      onProgress('解签已取消')
+    }
+  }
 } 

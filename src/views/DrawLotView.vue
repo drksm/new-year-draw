@@ -13,34 +13,17 @@
     
     <Transition name="fade">
       <div v-if="lotStore.currentLot" class="result-section">
-        <LotDetailModal :lot="lotStore.currentLot" />
+        <LotDetailModal 
+          :lot="lotStore.currentLot" 
+          :interpretation="interpretation"
+        />
         <div class="action-buttons">
-          <button class="action-button interpret" @click="handleShowInterpretation">解签</button>
+          <button class="action-button interpret" @click="handleShowInterpretation">
+            {{ interpretation ? '重新解签' : '解签' }}
+          </button>
           <button class="action-button redraw" @click="handleReset">再抽一次</button>
         </div>
-        
-        <div class="history-section" v-if="lotStore.lotHistory.length > 1">
-          <h3>抽签历史</h3>
-          <div class="history-list">
-            <div v-for="(lot, index) in lotStore.lotHistory.slice().reverse()" 
-                 :key="lot.drawTime"
-                 class="history-item"
-                 v-if="index < 5">
-              <span class="history-time">{{ formatTime(lot.drawTime) }}</span>
-              <span class="history-title">{{ lot.title }}</span>
-            </div>
-          </div>
-        </div>
       </div>
-    </Transition>
-    
-    <Transition name="fade">
-      <InterpretationModal
-        v-if="showInterpretation"
-        :lot="lotStore.currentLot"
-        :interpretation="interpretation"
-        @close="handleCloseInterpretation"
-      />
     </Transition>
   </div>
 </template>
@@ -50,14 +33,12 @@ import { ref } from 'vue'
 import { useLotStore } from '../stores/lotStore'
 import LotTube from '../components/LotTube.vue'
 import LotDetailModal from '../components/LotDetailModal.vue'
-import InterpretationModal from '../components/InterpretationModal.vue'
 import { drawLot, interpretLot } from '../api/lotService'
 
 const lotStore = useLotStore()
-const showInterpretation = ref(false)
 const interpretation = ref(null)
 const isStarted = ref(false)
-const interpretationCache = ref(new Map())
+const currentRequest = ref(null)
 
 const handleLotSelect = async (index) => {
   try {
@@ -76,65 +57,61 @@ const handleLotSelect = async (index) => {
   }
 }
 
-const handleShowInterpretation = async () => {
-  try {
-    const lotId = lotStore.currentLot.id
-    
-    // 检查缓存
-    if (interpretationCache.value.has(lotId)) {
-      interpretation.value = interpretationCache.value.get(lotId)
-      showInterpretation.value = true
-      return
-    }
-
-    // 首次请求
-    interpretation.value = ''
-    showInterpretation.value = true
-    
-    // 构建完整的签文内容
-    const lot = lotStore.currentLot
-    const descriptions = [
-      lot.description1,
-      lot.description2,
-      lot.description3
-    ].filter(Boolean).join('\n')
-    
-    const content = `我这次抽的签是，${lot.title}\n${lot.content}\n参考如下：\n${descriptions}`
-    
-    await interpretLot(content, (text) => {
-      interpretation.value = text
-    })
-
-    // 缓存结果
-    interpretationCache.value.set(lotId, interpretation.value)
-  } catch (error) {
-    console.error('Failed to get interpretation:', error)
-    interpretation.value = '解签失败，请稍后重试'
+const handleShowInterpretation = () => {
+  // 如果有正在进行的请求，先中止它
+  if (currentRequest.value) {
+    currentRequest.value.abort()
   }
-}
 
-const handleCloseInterpretation = () => {
-  showInterpretation.value = false
+  // 立即设置加载状态
+  interpretation.value = '正在解签中...'
+  
+  // 构建完整的签文内容
+  const lot = lotStore.currentLot
+  const descriptions = [
+    lot.description1,
+    lot.description2,
+    lot.description3
+  ].filter(Boolean).join('\n')
+  
+  const content = `我这次抽的签是，${lot.title}\n${lot.content}\n参考如下：\n${descriptions}`
+  
+  // 设置超时处理
+  const timeoutId = setTimeout(() => {
+    if (interpretation.value === '正在解签中...') {  // 只有在还在加载状态时才显示超时
+      interpretation.value = '解签超时，请稍后重试。\n\n可能的原因：\n1. 网络连接不稳定\n2. 服务器响应较慢\n\n您可以点击"重新解签"再次尝试。'
+    }
+  }, 30000)
+
+  // 发起解签请求
+  const request = interpretLot(content, (text) => {
+    clearTimeout(timeoutId)
+    // 确保新的文本内容不为空再更新
+    if (text && text.trim()) {
+      interpretation.value = text
+    }
+  })
+
+  // 保存请求对象，以便在需要时可以中止请求
+  currentRequest.value = request
 }
 
 const handleStart = () => {
   isStarted.value = true
   lotStore.clearCurrentLot()
   interpretation.value = null
-  showInterpretation.value = false
 }
 
 const handleReset = () => {
+  // 如果有正在进行的请求，先中止它
+  if (currentRequest.value) {
+    currentRequest.value.abort()
+    currentRequest.value = null
+  }
+  
   isStarted.value = true
   lotStore.clearCurrentLot()
   interpretation.value = null
-  showInterpretation.value = false
-  interpretationCache.value.clear()
-}
-
-const formatTime = (isoString) => {
-  const date = new Date(isoString)
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 </script>
 
@@ -190,48 +167,6 @@ const formatTime = (isoString) => {
 
 .action-button.redraw:hover {
   background-color: #1e88e5;
-}
-
-.history-section {
-  width: 100%;
-  max-width: 800px;
-  margin-top: 20px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.history-section h3 {
-  color: #8B4513;
-  margin-bottom: 15px;
-  font-size: 1.2rem;
-}
-
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.history-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 10px;
-  background: #fff9f0;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.history-time {
-  color: #666;
-  min-width: 120px;
-}
-
-.history-title {
-  color: #333;
-  font-weight: 500;
 }
 
 .fade-enter-active,

@@ -1,21 +1,28 @@
 <template>
-  <div class="lot-detail">
-    <div class="lot-content">
+  <div class="lot-detail-modal">
+    <div class="modal-content">
       <h2 class="lot-title">{{ lot.title }}</h2>
-      <div class="lot-image" v-if="lot.img">
-        <img :src="lot.img" alt="签文图片" @load="handleImageLoad" />
-        <div v-if="isLoading" class="image-loading">
-          <div class="loading-spinner"></div>
-        </div>
+      
+      <div v-if="lot.img" class="lot-image">
+        <img :src="lot.img" alt="签文图片" @load="handleImageLoad">
+        <div v-if="!imageLoaded" class="loading-spinner"></div>
       </div>
-      <div class="lot-text">
-        <h3>签文内容：</h3>
-        <p class="content">{{ lot.content }}</p>
-        
-        <div class="descriptions">
-          <div v-if="lot.description3" class="description-item">
-            <h4>圣意：</h4>
-            <p>{{ lot.description3 }}</p>
+      
+      <div class="lot-content">{{ lot.content }}</div>
+      
+      <div v-if="lot.description3" class="lot-description">
+        <h3>圣意</h3>
+        <div>{{ lot.description3 }}</div>
+      </div>
+
+      <div v-if="interpretation" class="lot-interpretation">
+        <h3>解签</h3>
+        <div class="interpretation-content">
+          <div v-if="interpretation === '正在解签中...'" class="loading-text">
+            {{ interpretation }}
+          </div>
+          <div v-else class="interpretation-text">
+            {{ interpretation }}
           </div>
         </div>
       </div>
@@ -30,18 +37,22 @@ const props = defineProps({
   lot: {
     type: Object,
     required: true
+  },
+  interpretation: {
+    type: String,
+    default: null
   }
 })
 
-const isLoading = ref(true)
+const imageLoaded = ref(false)
 
 const handleImageLoad = () => {
-  isLoading.value = false
+  imageLoaded.value = true
 }
 </script>
 
 <style scoped>
-.lot-detail {
+.lot-detail-modal {
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
@@ -49,6 +60,13 @@ const handleImageLoad = () => {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-content {
+  position: relative;
+  width: 100%;
 }
 
 .lot-title {
@@ -56,6 +74,11 @@ const handleImageLoad = () => {
   margin: 0 0 20px 0;
   font-size: 1.5rem;
   text-align: center;
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 10px 0;
+  z-index: 1;
 }
 
 .lot-image {
@@ -149,12 +172,62 @@ h3 {
 }
 
 @media (max-width: 768px) {
-  .lot-detail {
+  .lot-detail-modal {
     width: 95%;
+    max-height: 75vh;
   }
   
-  .content {
+  .lot-content {
     font-size: 1.1rem;
   }
+}
+
+.lot-description {
+  margin-top: 20px;
+  padding: 15px;
+  background: #fff9f0;
+  border-radius: 8px;
+  border: 1px solid #e0d5c1;
+}
+
+.lot-interpretation {
+  margin-top: 20px;
+  padding: 15px;
+  background: #fff9f0;
+  border-radius: 8px;
+  border: 1px solid #e0d5c1;
+}
+
+.interpretation-content {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.loading-text {
+  color: #666;
+  font-style: italic;
+}
+
+.interpretation-text {
+  color: #333;
+}
+
+/* 自定义滚动条样式 */
+.lot-detail-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.lot-detail-modal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.lot-detail-modal::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.lot-detail-modal::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style> 
