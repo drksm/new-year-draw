@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 -->
+  <rect width="180" height="180" fill="#FFF5EE"/>
+  
+  <!-- 签筒 -->
+  <g transform="translate(90, 90)">
+    <!-- 筒身 -->
+    <path d="M-40,0 C-40,-60 40,-60 40,0 L40,50 C40,70 -40,70 -40,50 Z" 
+          fill="#8B2500" stroke="#3E2723" stroke-width="2"/>
+    
+    <!-- 签子 -->
+    <g transform="translate(0, -10)">
+      <!-- 中间的签 -->
+      <rect x="-6" y="-40" width="12" height="80" fill="#FFE4B5" rx="2" 
+            stroke="#DEB887" stroke-width="1"/>
+      
+      <!-- 左边的签 -->
+      <rect x="-24" y="-35" width="12" height="70" fill="#FFE4B5" rx="2" 
+            stroke="#DEB887" stroke-width="1"
+            transform="rotate(-15)"/>
+      
+      <!-- 右边的签 -->
+      <rect x="12" y="-35" width="12" height="70" fill="#FFE4B5" rx="2" 
+            stroke="#DEB887" stroke-width="1"
+            transform="rotate(15)"/>
+    </g>
+    
+    <!-- 装饰纹理 -->
+    <path d="M-40,0 C-40,-60 40,-60 40,0" 
+          fill="none" stroke="#3E2723" stroke-width="2"/>
+    <path d="M-40,50 C-40,70 40,70 40,50" 
+          fill="none" stroke="#3E2723" stroke-width="2"/>
+  </g>
+  
+  <!-- 装饰圆圈 -->
+  <circle cx="90" cy="90" r="85" 
+          fill="none" stroke="#8B4513" stroke-width="2" 
+          stroke-dasharray="4,4"/>
+</svg> 

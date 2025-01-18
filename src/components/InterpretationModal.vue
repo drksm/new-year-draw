@@ -6,18 +6,8 @@
         <button class="close-button" @click="$emit('close')">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="lot-content">
-          <h3>签文内容：</h3>
-          <p>{{ lot.content }}</p>
-        </div>
-        <div class="interpretation">
-          <h3>解签：</h3>
-          <p class="interpretation-text" v-html="formattedInterpretation"></p>
-          <div v-if="isTyping && !isFromCache" class="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+        <div class="interpretation-content" ref="contentRef">
+          {{ displayText }}
         </div>
       </div>
     </div>
@@ -25,7 +15,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   lot: {
@@ -38,50 +28,19 @@ const props = defineProps({
   }
 })
 
+const contentRef = ref(null)
 const displayText = ref('')
-const isTyping = ref(true)
-const isFromCache = ref(false)
-const typeDelay = 30 // 打字速度
-let typingQueue = Promise.resolve()
 
-const formattedInterpretation = computed(() => {
-  return displayText.value.replace(/\n/g, '<br>')
-})
-
-const typeCharacter = async (char) => {
-  await new Promise(resolve => setTimeout(resolve, typeDelay))
-  displayText.value += char
-}
-
-watch(() => props.interpretation, async (newText, oldText) => {
-  if (!newText) {
-    displayText.value = ''
-    isTyping.value = true
-    isFromCache.value = false
-    return
-  }
-
-  // 检查是否是从缓存加载
-  if (oldText !== null && oldText.length > 0) {
-    isFromCache.value = true
-    displayText.value = newText
-    isTyping.value = false
-    return
-  }
-
-  // 获取新增的文本
-  const newContent = newText.slice(displayText.value.length)
-  
-  // 将新字符加入打字队列
-  for (let char of newContent) {
-    typingQueue = typingQueue.then(() => typeCharacter(char))
-  }
-
-  // 如果是完整的响应，标记打字完成
-  if (newText.endsWith('。') || newText.endsWith('！') || newText.endsWith('？')) {
-    typingQueue.then(() => {
-      isTyping.value = false
-    })
+// 监听解签内容变化
+watch(() => props.interpretation, (newValue) => {
+  if (newValue) {
+    displayText.value = newValue
+    // 如果内容更新，滚动到底部
+    setTimeout(() => {
+      if (contentRef.value) {
+        contentRef.value.scrollTop = contentRef.value.scrollHeight
+      }
+    }, 0)
   }
 }, { immediate: true })
 </script>
@@ -106,9 +65,9 @@ watch(() => props.interpretation, async (newText, oldText) => {
   border-radius: 8px;
   width: 90%;
   max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
-  position: relative;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -116,6 +75,13 @@ watch(() => props.interpretation, async (newText, oldText) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
 }
 
 .close-button {
@@ -126,50 +92,29 @@ watch(() => props.interpretation, async (newText, oldText) => {
   color: #666;
 }
 
-.lot-content, .interpretation {
-  margin-bottom: 20px;
+.modal-body {
+  flex: 1;
+  overflow: hidden;
 }
 
-h3 {
-  color: #8B4513;
-  margin-bottom: 10px;
-}
-
-.interpretation-text {
-  line-height: 1.6;
+.interpretation-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px;
   white-space: pre-wrap;
-  min-height: 100px;
+  line-height: 1.6;
+  font-size: 1.1rem;
+  color: #333;
 }
 
-.typing-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-.typing-indicator span {
-  width: 4px;
-  height: 4px;
-  background: #8B4513;
-  border-radius: 50%;
-  animation: typing 1s infinite;
-}
-
-.typing-indicator span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-indicator span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes typing {
-  0%, 100% {
-    transform: translateY(0);
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    margin: 10px;
   }
-  50% {
-    transform: translateY(-4px);
+  
+  .interpretation-content {
+    font-size: 1rem;
   }
 }
 </style> 
