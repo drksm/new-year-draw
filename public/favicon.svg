@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- 签筒背景 -->
+  <circle cx="16" cy="16" r="15" fill="#8B2500"/>
+  
+  <!-- 签子 -->
+  <g transform="translate(16, 16)">
+    <!-- 中间的签 -->
+    <rect x="-1.5" y="-10" width="3" height="20" fill="#FFE4B5" rx="1"/>
+    
+    <!-- 左边的签 -->
+    <rect x="-6" y="-8" width="3" height="16" fill="#FFE4B5" rx="1" 
+          transform="rotate(-15)"/>
+    
+    <!-- 右边的签 -->
+    <rect x="3" y="-8" width="3" height="16" fill="#FFE4B5" rx="1" 
+          transform="rotate(15)"/>
+  </g>
+  
+  <!-- 外圈装饰 -->
+  <circle cx="16" cy="16" r="15" fill="none" stroke="#FFE4B5" stroke-width="1"/>
+</svg> 

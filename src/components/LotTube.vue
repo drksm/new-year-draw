@@ -106,7 +106,7 @@ const handleScreenClick = () => {
   gap: 20px;
   padding: 20px;
   min-height: 800px;
-  margin-top: -200px;
+  margin-top: 20%;
 }
 
 .start-button {
