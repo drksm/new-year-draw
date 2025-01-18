@@ -50,19 +50,25 @@
         />
       </svg>
     </div>
-    <div class="loading-text" :class="{ 'fade-out': progress >= 100 }">
-      {{ progress >= 100 ? '加载完成' : '祈福加载中...' }}
+    <div v-if="error" class="error-container">
+      <div class="error-message">{{ error }}</div>
+      <button class="retry-button" @click="retryLogin">重试</button>
     </div>
-    <div v-if="progress < 100" class="loading-progress">
-      <div class="progress-bar" :style="{ width: progress + '%' }"></div>
-    </div>
-    <button 
-      v-else 
-      class="enter-button"
-      @click="enterSite"
-    >
-      进入祈福
-    </button>
+    <template v-else>
+      <div class="loading-text" :class="{ 'fade-out': progress >= 100 }">
+        {{ progress >= 100 ? '加载完成' : '祈福加载中...' }}
+      </div>
+      <div v-if="progress < 100" class="loading-progress">
+        <div class="progress-bar" :style="{ width: progress + '%' }"></div>
+      </div>
+      <button 
+        v-else 
+        class="enter-button"
+        @click="enterSite"
+      >
+        进入祈福
+      </button>
+    </template>
   </div>
 </template>
 
@@ -79,24 +85,29 @@ const progress = ref(0)
 const store = useMusicStore()
 const authStore = useAuthStore()
 const isLoading = ref(true)
+const error = ref(null)
 
 const handleLogin = async () => {
   try {
+    error.value = null
     console.log('Starting login...')
     const token = await login()
     console.log('Login successful, token:', token)
     if (!token) {
-      throw new Error('No token received from login')
+      throw new Error('登录失败：未收到有效令牌')
     }
     authStore.setToken(token)
     console.log('Token stored in authStore:', authStore.token)
-  } catch (error) {
-    console.error('Login error:', error)
-    throw error // 向上传播错误
+    return true
+  } catch (err) {
+    console.error('Login error:', err)
+    error.value = err.message || '网络连接失败，请稍后重试'
+    return false
   }
 }
 
 const startLoading = () => {
+  progress.value = 0
   const totalTime = 3000
   const intervalTime = 50
   const steps = totalTime / intervalTime
@@ -112,19 +123,21 @@ const startLoading = () => {
   }, intervalTime)
 }
 
+const retryLogin = async () => {
+  const success = await handleLogin()
+  if (success) {
+    startLoading()
+  }
+}
+
 const enterSite = () => {
   router.replace({ name: 'draw' })
 }
 
 onMounted(async () => {
-  try {
-    await handleLogin()
+  const success = await handleLogin()
+  if (success) {
     startLoading()
-    setTimeout(() => {
-      isLoading.value = false
-    }, 2000)
-  } catch (error) {
-    console.error('Failed to initialize:', error)
   }
 })
 </script>
@@ -143,6 +156,46 @@ onMounted(async () => {
   background: linear-gradient(to bottom, rgba(255, 228, 181, 0.8), rgba(255, 182, 193, 0.8));
 }
 
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 1;
+}
+
+.error-message {
+  color: #D32F2F;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 15px 25px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.retry-button {
+  background: #8B4513;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 25px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.retry-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.retry-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .loading-text {
   font-size: 1.5rem;
   color: #8B4513;
@@ -153,7 +206,7 @@ onMounted(async () => {
 
 .loading-text.fade-out {
   animation: textFadeOut 2s forwards;
-  animation-delay: 0.5s; /* 等待半秒后开始淡出 */
+  animation-delay: 0.5s;
 }
 
 @keyframes textFadeOut {

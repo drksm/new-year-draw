@@ -4,22 +4,8 @@ import { useAuthStore } from '../stores/authStore'
 // 创建 axios 实例
 const api = axios.create({
   baseURL: '/',
-  timeout: 5000
+  timeout: 30000
 })
-
-// 请求拦截器
-api.interceptors.request.use(
-  config => {
-    const authStore = useAuthStore()
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
-    }
-    return config
-  },
-  error => {
-    return Promise.reject(error)
-  }
-)
 
 // 响应拦截器
 api.interceptors.response.use(
@@ -29,45 +15,61 @@ api.interceptors.response.use(
 
 export const drawLot = async () => {
   try {
-    const response = await api.post('/api/lot/draw')
-    if (response.code === 200) {
-      return response.data
-    } else {
-      throw new Error(response.message || '抽签失败')
-    }
+    const authStore = useAuthStore()
+    const response = await api.get('/api/tarot/draw/lots', {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+    return response
   } catch (error) {
-    throw new Error('网络请求失败')
+    console.error('Failed to draw lot:', error)
+    throw new Error('抽签失败：' + (error.response?.data?.message || '网络请求失败'))
   }
 }
 
-// 修改解签接口
-export const interpretLot = async (lotContent, onProgress) => {
-  try {
-    const response = await api.post('/api/aigc/stream/chat/', {
-      messages: [
-        { role: "system", content: "你是一个ai道士，现在请解签" },
-        { role: "user", content: lotContent }
-      ]
-    }, {
-      responseType: 'text',
-      onDownloadProgress: (progressEvent) => {
-        console.log('Progress event:', progressEvent)
-        const text = progressEvent.event?.target?.responseText
-        if (text) {
-          onProgress(text)
-        }
-      }
-    })
+export const interpretLot = async (content, onProgress) => {
+  return new Promise((resolve, reject) => {
+    const authStore = useAuthStore()
+    const xhr = new XMLHttpRequest()
     
-    if (response) {
-      onProgress(response)
+    xhr.open('POST', '/api/aigc/stream/chat/')
+    xhr.setRequestHeader('Content-Type', 'application/json')
+    xhr.setRequestHeader('Authorization', `Bearer ${authStore.token}`)
+    
+    xhr.onprogress = (event) => {
+      const newText = event.target.responseText
+      if (newText) {
+        onProgress(newText)
+      }
     }
-    return response
-  } catch (error) {
-    console.error('Interpretation error details:', error)
-    if (error.response?.status === 401) {
-      throw new Error('登录已过期，请重新登录')
+    
+    xhr.onerror = () => {
+      reject(new Error('解签失败：网络请求失败'))
     }
-    throw new Error(error.response?.data?.message || error.message || '解签请求失败')
-  }
+    
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.responseText)
+      } else {
+        reject(new Error('解签失败：' + xhr.statusText))
+      }
+    }
+    
+    const data = {
+      messages: [
+        {
+          role: "system",
+          content: "你是一位专业的解签师，擅长解读签文并给出详细的解释。请根据用户提供的签文内容，从多个角度进行分析，并给出具体的建议。"
+        },
+        {
+          role: "user",
+          content: content
+        }
+      ]
+    }
+    
+    xhr.send(JSON.stringify(data))
+  })
 } 
