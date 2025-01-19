@@ -39,30 +39,62 @@ export const interpretLot = (lotContent, onProgress) => {
   const authStore = useAuthStore()
   
   return new Promise((resolve, reject) => {
-    // 创建 Web Worker
-    const worker = new Worker('/src/workers/interpretWorker.js')
-    
-    worker.onmessage = (event) => {
-      const { type, data } = event.data
-      if (type === 'progress') {
-        onProgress && onProgress(data)
-      } else if (type === 'error') {
-        reject(new Error(data))
-      }
-    }
-    
-    worker.onerror = (error) => {
-      reject(new Error('Worker error: ' + error.message))
-    }
-    
-    // 发送数据到 Worker
-    worker.postMessage({
-      url: '/api/aigc/stream/chat/',
-      token: authStore.token,
-      data: {
-        system: "你是一位专业的解签师，请根据抽到的签文内容为用户解签",
-        content: lotContent
-      }
+    const controller = new AbortController()
+    const signal = controller.signal
+
+    fetch('/api/aigc/stream/chat/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({
+        messages: [
+          {"role": "system", "content": "你是一位专业的解签师，请根据抽到的签文内容为用户解签"},
+          {"role": "user", "content": lotContent}
+        ]
+      }),
+      signal
     })
+    .then(response => {
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired
+          if (!authStore.handleTokenError()) {
+            throw new Error('请稍后再试')
+          }
+        }
+        throw new Error('网络请求失败')
+      }
+      
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      function readStream() {
+        reader.read().then(({done, value}) => {
+          if (done) {
+            if (buffer) {
+              onProgress(buffer)
+            }
+            resolve()
+            return
+          }
+
+          buffer += decoder.decode(value, {stream: true})
+          onProgress(buffer)
+          readStream()
+        }).catch(error => {
+          reject(error)
+        })
+      }
+
+      readStream()
+    })
+    .catch(error => {
+      reject(error)
+    })
+
+    return controller
   })
 } 
