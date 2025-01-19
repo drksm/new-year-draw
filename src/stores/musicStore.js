@@ -2,59 +2,52 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useMusicStore = defineStore('music', () => {
-  const bgMusic = ref(null)
-  const isPlaying = ref(false)
-  const showMusicControl = ref(true)
+  const isMusicEnabled = ref(false)
+  let bgmAudio = null
 
-  const setAudioElement = (element) => {
-    bgMusic.value = element
-    bgMusic.value.volume = 0.3
-  }
-
-  const playMusic = async () => {
-    if (bgMusic.value) {
-      try {
-        await bgMusic.value.load()
-        const playPromise = bgMusic.value.play()
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              isPlaying.value = true
-            })
-            .catch(error => {
-              console.log('Auto-play was prevented:', error)
-              isPlaying.value = false
-            })
-        }
-      } catch (error) {
-        console.log('Error playing audio:', error)
-        isPlaying.value = false
-      }
+  const setMusicEnabled = (enabled) => {
+    isMusicEnabled.value = enabled
+    if (!enabled && bgmAudio) {
+      bgmAudio.pause()
     }
   }
 
-  const toggleMusic = () => {
-    if (bgMusic.value) {
-      if (isPlaying.value) {
-        bgMusic.value.pause()
-        isPlaying.value = false
-      } else {
-        playMusic()
-      }
+  const playBackgroundMusic = () => {
+    if (!isMusicEnabled.value) return
+    
+    if (!bgmAudio) {
+      bgmAudio = new Audio('/audio/background.mp3')
+      bgmAudio.loop = true
     }
+    
+    bgmAudio.play().catch(error => {
+      console.error('Failed to play background music:', error)
+    })
   }
 
-  const setShowMusicControl = (show) => {
-    showMusicControl.value = show
+  const playDrawSound = () => {
+    if (!isMusicEnabled.value) return
+    
+    const drawSound = new Audio('/audio/draw.mp3')
+    drawSound.play().catch(error => {
+      console.error('Failed to play draw sound:', error)
+    })
+  }
+
+  const playShakeSound = () => {
+    if (!isMusicEnabled.value) return
+    
+    const shakeSound = new Audio('/audio/shake.mp3')
+    shakeSound.play().catch(error => {
+      console.error('Failed to play shake sound:', error)
+    })
   }
 
   return {
-    bgMusic,
-    isPlaying,
-    showMusicControl,
-    setAudioElement,
-    playMusic,
-    toggleMusic,
-    setShowMusicControl
+    isMusicEnabled,
+    setMusicEnabled,
+    playBackgroundMusic,
+    playDrawSound,
+    playShakeSound
   }
 }) 

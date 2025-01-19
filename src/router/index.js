@@ -1,38 +1,37 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LoadingScreen from '@/components/LoadingScreen.vue'
-import DrawLotView from '@/views/DrawLotView.vue'
-import { useMusicStore } from '@/stores/musicStore'
-
-const routes = [
-  {
-    path: '/',
-    name: 'loading',
-    component: LoadingScreen
-  },
-  {
-    path: '/draw',
-    name: 'draw',
-    component: DrawLotView
-  }
-]
+import { useMusicStore } from '../stores/musicStore'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes: [
+    {
+      path: '/',
+      name: 'loading',
+      component: () => import('../components/LoadingScreen.vue')
+    },
+    {
+      path: '/draw',
+      name: 'draw',
+      component: () => import('../views/DrawLotView.vue')
+    }
+  ]
 })
 
-// 简化路由守卫逻辑
 router.beforeEach((to, from, next) => {
   const store = useMusicStore()
-  // 音乐控制按钮始终显示
-  store.setShowMusicControl(true)
   
-  // 如果是刷新页面或直接访问非根路径
+  // 如果是刷新页面或直接访问非根路径，重定向到加载页面
   if (!from.name && to.path !== '/') {
     next('/')
-  } else {
-    next()
+    return
   }
+  
+  // 只在进入抽签页面时播放背景音乐
+  if (to.name === 'draw' && store.isMusicEnabled) {
+    store.playBackgroundMusic()
+  }
+  
+  next()
 })
 
 export default router 

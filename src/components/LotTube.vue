@@ -1,47 +1,41 @@
 <template>
   <div class="lot-tube" @click="handleScreenClick">
-    <Transition name="fade">
-      <button v-if="!isStarted && !selectedIndex" class="start-button" @click.stop="handleStart">开始抽签</button>
-    </Transition>
-    
-    <Transition name="fade">
-      <div v-if="isStarted && !selectedIndex" class="papers-container">
-        <!-- 后半部分筒子 -->
-        <svg class="barrel-back" :class="{ shaking: isShaking }" viewBox="-20 -20 240 440" width="660" height="380">
-          <!-- 后半部分筒身 -->
-          <path class="barrel-body" d="M10,20 C10,-15 190,-15 190,20 L190,360 C190,380 10,380 10,360 Z" 
-                fill="#8B2500" stroke="#3E2723" stroke-width="2"/>
-          <!-- 后半部分上边缘 -->
-          <path d="M10,20 C10,-15 190,-15 190,20" 
-                fill="none" stroke="#3E2723" stroke-width="2"/>
-          <!-- 后半部分下边缘 -->
-          <path d="M10,360 C10,380 190,380 190,360" 
-                fill="none" stroke="#3E2723" stroke-width="2"/>
-        </svg>
+    <div class="papers-container">
+      <!-- 后半部分筒子 -->
+      <svg class="barrel-back" :class="{ shaking: isShaking }" viewBox="-20 -20 240 440" width="660" height="380">
+        <!-- 后半部分筒身 -->
+        <path class="barrel-body" d="M10,20 C10,-15 190,-15 190,20 L190,360 C190,380 10,380 10,360 Z" 
+              fill="#8B2500" stroke="#3E2723" stroke-width="2"/>
+        <!-- 后半部分上边缘 -->
+        <path d="M10,20 C10,-15 190,-15 190,20" 
+              fill="none" stroke="#3E2723" stroke-width="2"/>
+        <!-- 后半部分下边缘 -->
+        <path d="M10,360 C10,380 190,380 190,360" 
+              fill="none" stroke="#3E2723" stroke-width="2"/>
+      </svg>
 
-        <!-- 前半部分筒子 -->
-        <svg class="barrel-front" :class="{ shaking: isShaking }" viewBox="-20 30 240 420" width="770" height="380">
-          <!-- 前半部分筒身 -->
-          <path class="barrel-body" d="M10,20 C10,55 190,55 190,20 L190,360 C190,380 10,380 10,360 Z" 
-                fill="#8B2500"/>
-          <!-- 前半部分上边缘 -->
-          <path d="M10,20 C10,55 190,55 190,20" 
-                fill="none"/>
-          <!-- 前半部分下边缘 -->
-          <path d="M10,360 C10,380 190,380 190,360" 
-                fill="none"/>
-        </svg>
+      <!-- 前半部分筒子 -->
+      <svg class="barrel-front" :class="{ shaking: isShaking }" viewBox="-20 30 240 420" width="770" height="380">
+        <!-- 前半部分筒身 -->
+        <path class="barrel-body" d="M10,20 C10,55 190,55 190,20 L190,360 C190,380 10,380 10,360 Z" 
+              fill="#8B2500"/>
+        <!-- 前半部分上边缘 -->
+        <path d="M10,20 C10,55 190,55 190,20" 
+              fill="none"/>
+        <!-- 前半部分下边缘 -->
+        <path d="M10,360 C10,380 190,380 190,360" 
+              fill="none"/>
+      </svg>
 
-        <!-- 签子 -->
-        <div v-for="i in 8" :key="i-1"
-             :class="['paper', `paper-${i}`, { 
-               shaking: isShaking && selectedIndex !== i-1, 
-               selected: selectedIndex === i-1 
-             }]"
-             @click="handleSelect(i-1)">
-        </div>
+      <!-- 签子 -->
+      <div v-for="i in 8" :key="i-1"
+           :class="['paper', `paper-${i}`, { 
+             shaking: isShaking && selectedIndex !== i-1, 
+             selected: selectedIndex === i-1 
+           }]"
+           @click="handleSelect(i-1)">
       </div>
-    </Transition>
+    </div>
   </div>
 </template>
 
@@ -52,28 +46,12 @@ const props = defineProps({
   onSelect: {
     type: Function,
     required: true
-  },
-  isStarted: {
-    type: Boolean,
-    required: true
   }
 })
 
-const emit = defineEmits(['reset', 'start'])
+const emit = defineEmits(['reset'])
 const selectedIndex = ref(null)
 const isShaking = ref(false)
-
-watch(() => props.isStarted, (newValue) => {
-  if (!newValue) {
-    return
-  }
-  selectedIndex.value = null
-  isShaking.value = false
-})
-
-const handleStart = () => {
-  emit('start')
-}
 
 const handleSelect = (index) => {
   if (selectedIndex.value !== null || isShaking.value) return
@@ -91,7 +69,7 @@ const handleSelect = (index) => {
 }
 
 const handleScreenClick = () => {
-  if (!props.isStarted || selectedIndex.value !== null || isShaking.value) return
+  if (selectedIndex.value !== null || isShaking.value) return
   const randomIndex = Math.floor(Math.random() * 8)
   handleSelect(randomIndex)
 }
@@ -107,20 +85,6 @@ const handleScreenClick = () => {
   padding: 20px;
   min-height: 800px;
   margin-top: 20%;
-}
-
-.start-button {
-  padding: 12px 24px;
-  font-size: 18px;
-  background-color: #f0c14b;
-  border: 1px solid #a88734;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.start-button:hover {
-  background-color: #f4d078;
 }
 
 .papers-container {

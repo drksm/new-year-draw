@@ -14,8 +14,8 @@ api.interceptors.response.use(
 )
 
 export const drawLot = async () => {
+  const authStore = useAuthStore()
   try {
-    const authStore = useAuthStore()
     const response = await api.get('/api/tarot/draw/lots', {
       headers: {
         'Content-Type': 'application/json',
@@ -24,50 +24,77 @@ export const drawLot = async () => {
     })
     return response
   } catch (error) {
-    console.error('Failed to draw lot:', error)
-    throw new Error('抽签失败：' + (error.response?.data?.message || '网络请求失败'))
+    console.error('Draw lot error:', error)
+    if (error.response?.status === 401) {
+      // Token expired
+      if (!authStore.handleTokenError()) {
+        throw new Error('请稍后再试')
+      }
+    }
+    throw error
   }
 }
 
-export const interpretLot = (content, onProgress) => {
+export const interpretLot = (lotContent, onProgress) => {
   const authStore = useAuthStore()
   
-  // 创建一个新的 Worker 来处理 XHR 请求
-  const worker = new Worker(new URL('../workers/interpretWorker.js', import.meta.url))
-  
-  worker.onmessage = (event) => {
-    const { type, data } = event.data
-    if (type === 'progress') {
-      onProgress(data)
-    } else if (type === 'error') {
-      console.error('解签请求失败:', data)
-      onProgress('解签失败：' + data)
-    }
-  }
+  return new Promise((resolve, reject) => {
+    const controller = new AbortController()
+    const signal = controller.signal
 
-  // 发送请求数据到 Worker
-  worker.postMessage({
-    url: '/api/aigc/stream/chat/',
-    token: authStore.token,
-    data: {
-      messages: [
-        {
-          role: "system",
-          content: "你是一位专业的解签师，擅长解读签文并给出详细的解释。请根据用户提供的签文内容，从多个角度进行分析，并给出具体的建议。"
-        },
-        {
-          role: "user",
-          content: content
+    fetch('/api/aigc/stream/chat/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({
+        messages: [
+          {"role": "system", "content": "你是一位专业的解签师，请根据抽到的签文内容为用户解签"},
+          {"role": "user", "content": lotContent}
+        ]
+      }),
+      signal
+    })
+    .then(response => {
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired
+          if (!authStore.handleTokenError()) {
+            throw new Error('请稍后再试')
+          }
         }
-      ]
-    }
-  })
+        throw new Error('网络请求失败')
+      }
+      
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
 
-  // 返回控制对象
-  return {
-    abort: () => {
-      worker.terminate()
-      onProgress('解签已取消')
-    }
-  }
+      function readStream() {
+        reader.read().then(({done, value}) => {
+          if (done) {
+            if (buffer) {
+              onProgress(buffer)
+            }
+            resolve()
+            return
+          }
+
+          buffer += decoder.decode(value, {stream: true})
+          onProgress(buffer)
+          readStream()
+        }).catch(error => {
+          reject(error)
+        })
+      }
+
+      readStream()
+    })
+    .catch(error => {
+      reject(error)
+    })
+
+    return controller
+  })
 } 

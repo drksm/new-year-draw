@@ -72,9 +72,9 @@ const handleImageLoad = () => {
 .lot-title {
   color: #8B4513;
   margin: 0 0 20px 0;
-  font-size: 1.5rem;
+  font-size: 2rem;
+  font-weight: bold;
   text-align: center;
-  position: sticky;
   top: 0;
   background: white;
   padding: 10px 0;
@@ -129,15 +129,17 @@ const handleImageLoad = () => {
   margin-bottom: 20px;
 }
 
-.content {
-  font-size: 1.2rem;
-  line-height: 1.8;
+.lot-content {
+  font-size: 2rem;
+  line-height: 2;
   color: #333;
   margin: 20px 0;
-  padding: 15px;
+  padding: 25px;
   background: #fff9f0;
   border-radius: 8px;
   border-left: 4px solid #8B4513;
+  font-weight: bold;
+  text-align: center;
 }
 
 .descriptions {
@@ -168,7 +170,9 @@ const handleImageLoad = () => {
 
 h3 {
   color: #8B4513;
-  margin-bottom: 10px;
+  margin: 20px 0 15px 0;
+  font-size: 1.8rem;
+  font-weight: bold;
 }
 
 @media (max-width: 768px) {
@@ -177,39 +181,52 @@ h3 {
     max-height: 75vh;
   }
   
+  .lot-title {
+    font-size: 1.8rem;
+  }
+  
   .lot-content {
-    font-size: 1.1rem;
+    font-size: 1.6rem;
+    padding: 20px;
+  }
+  
+  h3 {
+    font-size: 1.6rem;
+  }
+  
+  .lot-description, 
+  .lot-interpretation,
+  .interpretation-text,
+  .loading-text {
+    font-size: 1.2rem;
   }
 }
 
-.lot-description {
+.lot-description, .lot-interpretation {
   margin-top: 20px;
-  padding: 15px;
+  padding: 20px;
   background: #fff9f0;
   border-radius: 8px;
   border: 1px solid #e0d5c1;
-}
-
-.lot-interpretation {
-  margin-top: 20px;
-  padding: 15px;
-  background: #fff9f0;
-  border-radius: 8px;
-  border: 1px solid #e0d5c1;
+  font-size: 1.4rem;
+  line-height: 1.8;
 }
 
 .interpretation-content {
   white-space: pre-wrap;
-  line-height: 1.6;
+  line-height: 1.8;
 }
 
 .loading-text {
   color: #666;
   font-style: italic;
+  font-size: 1.4rem;
 }
 
 .interpretation-text {
   color: #333;
+  font-size: 1.4rem;
+  line-height: 1.8;
 }
 
 /* 自定义滚动条样式 */

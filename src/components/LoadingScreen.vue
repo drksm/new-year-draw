@@ -69,6 +69,11 @@
         进入祈福
       </button>
     </template>
+    
+    <AudioConfirmModal 
+      :show="showAudioModal"
+      @confirm="handleAudioConfirm"
+    />
   </div>
 </template>
 
@@ -78,7 +83,7 @@ import { useRouter } from 'vue-router'
 import { useMusicStore } from '@/stores/musicStore'
 import { useAuthStore } from '../stores/authStore'
 import { login } from '../api/authService'
-import LoadingClock from './LoadingClock.vue'
+import AudioConfirmModal from './AudioConfirmModal.vue'
 
 const router = useRouter()
 const progress = ref(0)
@@ -86,23 +91,32 @@ const store = useMusicStore()
 const authStore = useAuthStore()
 const isLoading = ref(true)
 const error = ref(null)
+const showAudioModal = ref(false)
 
 const handleLogin = async () => {
   try {
-    error.value = null
-    console.log('Starting login...')
-    const token = await login()
-    console.log('Login successful, token:', token)
-    if (!token) {
-      throw new Error('登录失败：未收到有效令牌')
+    const response = await login()
+    if (response.code === 0 && response.data?.token) {
+      authStore.setToken(response.data.token, response.data.refreshToken)
+      authStore.startAutoRefresh()
+      showAudioModal.value = true
+      startLoading()
+      return true
+    } else {
+      throw new Error('Login failed: Invalid response format')
     }
-    authStore.setToken(token)
-    console.log('Token stored in authStore:', authStore.token)
-    return true
-  } catch (err) {
-    console.error('Login error:', err)
-    error.value = err.message || '网络连接失败，请稍后重试'
+  } catch (error) {
+    console.error('Login error:', error)
+    error.value = '登录失败，请刷新页面重试'
     return false
+  }
+}
+
+const handleAudioConfirm = (allowed) => {
+  showAudioModal.value = false
+  if (allowed) {
+    store.setMusicEnabled(true)
+    store.playBackgroundMusic()
   }
 }
 
@@ -125,8 +139,8 @@ const startLoading = () => {
 
 const retryLogin = async () => {
   const success = await handleLogin()
-  if (success) {
-    startLoading()
+  if (!success) {
+    error.value = '登录失败，请刷新页面重试'
   }
 }
 
