@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // 创建 axios 实例
 const api = axios.create({
-  baseURL: '/',
+  baseURL: import.meta.env.VITE_API_BASE_URL,  // 使用环境变量
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json'
@@ -20,13 +20,9 @@ api.interceptors.response.use(
 
 export const login = async () => {
   try {
-    const response = await api.post('/api/token/', {
+    const response = await api.post('/token/', {
       username: 'tarot',
       password: 'PnTJQgX150&jQ69A'
-    }, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
     })
     
     // 检查响应中是否包含 access token
@@ -35,8 +31,8 @@ export const login = async () => {
         code: 0,
         message: 'success',
         data: {
-          token: response.access,  // 使用 access token
-          refreshToken: response.refresh  // 保存 refresh token 以备后用
+          token: response.access,
+          refreshToken: response.refresh
         }
       }
     }
