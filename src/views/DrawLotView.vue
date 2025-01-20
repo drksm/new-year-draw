@@ -17,11 +17,10 @@
           :lot="lotStore.currentLot" 
           :interpretation="interpretation"
         />
-        <div class="action-buttons">
+        <div v-if="!interpretation" class="action-buttons">
           <button class="action-button interpret" @click="handleShowInterpretation">
-            {{ interpretation ? '重新解签' : '解签' }}
+            解签
           </button>
-          <button class="action-button redraw" @click="handleReset">再抽一次</button>
         </div>
       </div>
     </Transition>
@@ -42,7 +41,6 @@ const currentRequest = ref(null)
 
 const handleLotSelect = async (index) => {
   try {
-    isStarted.value = false  // 隐藏黄纸
     // 调用抽签接口
     const result = await drawLot()
     console.log('Draw lot result:', result)
@@ -57,10 +55,11 @@ const handleLotSelect = async (index) => {
   }
 }
 
-const handleShowInterpretation = () => {
+const handleShowInterpretation = async () => {
   // 如果有正在进行的请求，先中止它
   if (currentRequest.value) {
     currentRequest.value.abort()
+    currentRequest.value = null
   }
 
   // 立即设置加载状态
@@ -80,20 +79,26 @@ const handleShowInterpretation = () => {
   const timeoutId = setTimeout(() => {
     if (interpretation.value === '正在解签中...') {  // 只有在还在加载状态时才显示超时
       interpretation.value = '解签超时，请稍后重试。\n\n可能的原因：\n1. 网络连接不稳定\n2. 服务器响应较慢\n\n您可以点击"重新解签"再次尝试。'
+      if (currentRequest.value) {
+        currentRequest.value.abort()
+        currentRequest.value = null
+      }
     }
   }, 30000)
 
-  // 发起解签请求
-  const request = interpretLot(content, (text) => {
+  try {
+    // 发起解签请求
+    currentRequest.value = await interpretLot(content, (text) => {
+      clearTimeout(timeoutId)
+      // 确保新的文本内容不为空再更新
+      if (text && text.trim()) {
+        interpretation.value = text
+      }
+    })
+  } catch (error) {
     clearTimeout(timeoutId)
-    // 确保新的文本内容不为空再更新
-    if (text && text.trim()) {
-      interpretation.value = text
-    }
-  })
-
-  // 保存请求对象，以便在需要时可以中止请求
-  currentRequest.value = request
+    interpretation.value = `解签失败：${error.message}\n\n您可以点击"重新解签"再次尝试。`
+  }
 }
 
 const handleStart = () => {

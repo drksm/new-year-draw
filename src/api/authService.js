@@ -29,16 +29,21 @@ export const login = async () => {
       }
     })
     
-    console.log('Login response:', response)
-    
+    // 检查响应中是否包含 access token
     if (response && response.access) {
-      return response.access
-    } else {
-      console.error('Invalid response format:', response)
-      throw new Error('登录失败：无效的响应格式')
+      return {
+        code: 0,
+        message: 'success',
+        data: {
+          token: response.access,  // 使用 access token
+          refreshToken: response.refresh  // 保存 refresh token 以备后用
+        }
+      }
     }
+    
+    throw new Error('Invalid token response')
   } catch (error) {
-    console.error('Login error details:', error.response || error)
-    throw new Error(error.response?.data?.message || '网络请求失败')
+    console.error('Login request failed:', error)
+    throw error
   }
 } 
