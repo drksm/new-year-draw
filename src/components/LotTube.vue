@@ -41,6 +41,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { useMusicStore } from '../stores/musicStore'
 
 const props = defineProps({
   onSelect: {
@@ -52,19 +53,21 @@ const props = defineProps({
 const emit = defineEmits(['reset'])
 const selectedIndex = ref(null)
 const isShaking = ref(false)
+const musicStore = useMusicStore()
 
 const handleSelect = (index) => {
   if (selectedIndex.value !== null || isShaking.value) return
   isShaking.value = true
   
+  // 立即播放抽签音效
+  musicStore.playDrawSound()
+  
   setTimeout(() => {
     isShaking.value = false
+    selectedIndex.value = index
     setTimeout(() => {
-      selectedIndex.value = index
-      setTimeout(() => {
-        props.onSelect(index)
-      }, 1500)
-    }, 100)
+      props.onSelect(index)
+    }, 1500)
   }, 1000)
 }
 
