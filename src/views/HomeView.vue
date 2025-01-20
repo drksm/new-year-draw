@@ -1,11 +1,11 @@
 <template>
   <div class="home-container">
-    <div class="title">新年抽签</div>
-    <button 
-      class="enter-button" 
+    <div class="title">新年抽dfd 签</div>
+    <button
+      class="enter-button"
       @click="handleEnter"
     >
-      进入祈福
+      dd
     </button>
   </div>
 </template>
@@ -62,4 +62,4 @@ const handleEnter = () => {
 .start-button:active {
   transform: scale(0.95);
 }
-</style> 
+</style>
