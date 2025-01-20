@@ -16,7 +16,20 @@
           class="enter-button"
           @click="enterSite"
         >
-          点击继续
+          <div class="button-text">
+            <p class="typing-text" :class="{ 'typing-done': isFirstLineTyped }">
+              <span v-for="(char, index) in firstLine" :key="index" 
+                    :style="{ animationDelay: `${index * 0.1}s` }">
+                {{ char }}
+              </span>
+            </p>
+            <p class="typing-text" :class="{ 'typing-done': isSecondLineTyped }" v-if="isFirstLineTyped">
+              <span v-for="(char, index) in secondLine" :key="index"
+                    :style="{ animationDelay: `${index * 0.1}s` }">
+                {{ char }}
+              </span>
+            </p>
+          </div>
         </button>
       </div>
     </template>
@@ -29,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMusicStore } from '@/stores/musicStore'
 import { useAuthStore } from '../stores/authStore'
@@ -43,6 +56,10 @@ const authStore = useAuthStore()
 const isLoading = ref(true)
 const error = ref(null)
 const showAudioModal = ref(false)
+const isFirstLineTyped = ref(false)
+const isSecondLineTyped = ref(ref(false))
+const firstLine = "在这里，你可以沉浸于宁静的抽签与祈愿之旅，感受心灵的慰藉与希望的曙光。"
+const secondLine = "点击任意键，开启你的专属祈愿时刻，让美好如约而至。"
 
 const handleLogin = async () => {
   try {
@@ -103,6 +120,18 @@ onMounted(async () => {
   const success = await handleLogin()
   if (success) {
     startLoading()
+  }
+})
+
+// 在进度达到100%后开始打字效果
+watch(progress, (newValue) => {
+  if (newValue >= 100) {
+    setTimeout(() => {
+      isFirstLineTyped.value = true
+      setTimeout(() => {
+        isSecondLineTyped.value = true
+      }, firstLine.length * 100 + 500) // 第一行打完后等待500ms再开始第二行
+    }, 500) // 进度条完成后等待500ms开始打字
   }
 })
 </script>
@@ -208,20 +237,64 @@ onMounted(async () => {
   left: 50%;
   transform: translateX(-50%);
   z-index: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .enter-button {
-  background: transparent;
   background: #8B4513;
   color: white;
-
   border: none;
-  padding: 12px 36px;
+  padding: 20px 40px;
   border-radius: 25px;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 500;
   cursor: pointer;
-  letter-spacing: 1px;
+  max-width: 80%;
+  width: 600px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.button-text {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  align-items: center;
+}
+
+.typing-text span {
+  display: inline-block;
+  opacity: 0;
+  animation: typing 0.5s forwards;
+  animation-play-state: paused;
+}
+
+.typing-text.typing-done span {
+  animation-play-state: running;
+}
+
+@keyframes typing {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.button-text p {
+  margin: 0;
+  line-height: 1.6;
+  text-align: center;
+  width: 100%;
+  padding: 0 20px;
+  min-height: 1.6em; /* 防止文字出现时的跳动 */
 }
 
 .mountain-background {
