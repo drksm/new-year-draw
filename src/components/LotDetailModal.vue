@@ -8,7 +8,7 @@
         <div v-if="!imageLoaded" class="loading-spinner"></div>
       </div>
       
-      <div class="lot-content">{{ lot.content }}</div>
+      <div class="lot-content">{{ formatContent(lot.content) }}</div>
       
       <div v-if="lot.description3" class="lot-description">
         <h3>圣意</h3>
@@ -49,19 +49,28 @@ const imageLoaded = ref(false)
 const handleImageLoad = () => {
   imageLoaded.value = true
 }
+
+const formatContent = (content) => {
+  if (!content) return ''
+  // 先替换所有标点符号为标点+换行，然后通过 split 和 filter 去除空行，最后用单个换行符重新连接
+  return content.replace(/[，。；！]/g, '$&\n').split('\n').filter(line => line.trim()).join('\n')
+}
 </script>
 
 <style scoped>
 .lot-detail-modal {
   width: 100%;
   max-width: 800px;
-  margin: 0 auto;
   padding: 20px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   max-height: 80vh;
   overflow-y: auto;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .modal-content {
@@ -131,7 +140,7 @@ const handleImageLoad = () => {
 
 .lot-content {
   font-size: 2rem;
-  line-height: 2;
+  line-height: 1.8;
   color: #333;
   margin: 20px 0;
   padding: 25px;
@@ -140,6 +149,7 @@ const handleImageLoad = () => {
   border-left: 4px solid #8B4513;
   font-weight: bold;
   text-align: center;
+  white-space: pre-line;
 }
 
 .descriptions {

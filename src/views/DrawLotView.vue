@@ -170,20 +170,25 @@ const handleReset = () => {
 }
 
 .result-section {
-  position: relative;
+  position: fixed;
   z-index: 1;
   width: 100%;
+  height: 100%;
   max-width: 800px;
-  margin: 0 auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 20px;
 }
 
 .action-buttons {
   display: flex;
   gap: 16px;
+  width: 100%;
   margin-top: 20px;
   margin-bottom: 20px;
 }
