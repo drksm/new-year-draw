@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useMusicStore } from '../stores/musicStore'
+import GuidanceView from '../views/GuidanceView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,6 +14,11 @@ const router = createRouter({
       path: '/draw',
       name: 'draw',
       component: () => import('../views/DrawLotView.vue')
+    },
+    {
+      path: '/guidance',
+      name: 'guidance',
+      component: GuidanceView
     }
   ]
 })

@@ -8,7 +8,7 @@
         <div v-if="!imageLoaded" class="loading-spinner"></div>
       </div>
       
-      <div class="lot-content">{{ lot.content }}</div>
+      <div class="lot-content">{{ formatContent(lot.content) }}</div>
       
       <div v-if="lot.description3" class="lot-description">
         <h3>圣意</h3>
@@ -17,7 +17,7 @@
 
       <div v-if="interpretation" class="lot-interpretation">
         <h3>解签</h3>
-        <div class="interpretation-content">
+        <div class="interpretation-content" ref="interpretationContent">
           <div v-if="interpretation === '正在解签中...'" class="loading-text">
             {{ interpretation }}
           </div>
@@ -26,12 +26,19 @@
           </div>
         </div>
       </div>
+
+      <div v-if="!interpretation" class="action-buttons">
+        <button class="action-button interpret" @click="handleShowInterpretation">
+          解签
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
+import { interpretLot } from '../api/lotService'
 
 const props = defineProps({
   lot: {
@@ -44,24 +51,125 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['update:interpretation'])
+
 const imageLoaded = ref(false)
+const currentRequest = ref(null)
+const interpretationContent = ref(null)
 
 const handleImageLoad = () => {
   imageLoaded.value = true
 }
+
+const formatContent = (content) => {
+  if (!content) return ''
+  // 先替换所有标点符号为标点+换行，然后通过 split 和 filter 去除空行，最后用单个换行符重新连接
+  return content.replace(/[，。；！]/g, '$&\n').split('\n').filter(line => line.trim()).join('\n')
+}
+
+const handleShowInterpretation = async () => {
+  // 如果有正在进行的请求，先中止它
+  if (currentRequest.value) {
+    currentRequest.value.abort()
+    currentRequest.value = null
+  }
+
+  // 立即设置加载状态
+  emit('update:interpretation', '正在解签中...')
+  
+  // 构建完整的签文内容
+  const lot = props.lot
+  const descriptions = [
+    lot.description1,
+    lot.description2,
+    lot.description3
+  ].filter(Boolean).join('\n')
+  
+  const content = `我这次抽的签是，${lot.title}\n${lot.content}\n参考如下：\n${descriptions}`
+  
+  // 设置超时处理
+  const timeoutId = setTimeout(() => {
+    if (props.interpretation === '正在解签中...') {  // 只有在还在加载状态时才显示超时
+      emit('update:interpretation', '解签超时，请稍后重试。\n\n可能的原因：\n1. 网络连接不稳定\n2. 服务器响应较慢\n\n您可以点击"重新解签"再次尝试。')
+      if (currentRequest.value) {
+        currentRequest.value.abort()
+        currentRequest.value = null
+      }
+    }
+  }, 30000)
+
+  try {
+    // 发起解签请求
+    currentRequest.value = await interpretLot(content, (text) => {
+      clearTimeout(timeoutId)
+      // 确保新的文本内容不为空再更新
+      if (text && text.trim()) {
+        emit('update:interpretation', text)
+      }
+    })
+  } catch (error) {
+    clearTimeout(timeoutId)
+    emit('update:interpretation', `解签失败：${error.message}\n\n您可以点击"重新解签"再次尝试。`)
+  }
+}
+
+// 添加防抖函数
+const debounce = (fn, delay) => {
+  let timeoutId = null
+  return (...args) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+    timeoutId = setTimeout(() => {
+      fn.apply(null, args)
+    }, delay)
+  }
+}
+
+// 优化的滚动函数
+const smoothScrollToBottom = debounce(() => {
+  const modalElement = document.querySelector('.lot-detail-modal')
+  if (!modalElement) return
+
+  const currentScroll = modalElement.scrollTop
+  const targetScroll = modalElement.scrollHeight - modalElement.clientHeight
+  
+  // 如果已经接近底部，不需要滚动
+  if (targetScroll - currentScroll < 50) return
+  
+  // 如果距离底部较远，使用平滑滚动
+  modalElement.scrollTo({
+    top: targetScroll,
+    behavior: 'smooth'
+  })
+}, 100)
+
+// 修改监听器
+watch(() => props.interpretation, (newVal, oldVal) => {
+  if (newVal && newVal !== oldVal && newVal !== '正在解签中...') {
+    nextTick(() => {
+      smoothScrollToBottom()
+    })
+  }
+}, { immediate: false })
 </script>
 
 <style scoped>
 .lot-detail-modal {
   width: 100%;
   max-width: 800px;
-  margin: 0 auto;
   padding: 20px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   max-height: 80vh;
   overflow-y: auto;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  scroll-behavior: smooth;
+  overscroll-behavior: none; /* 防止过度滚动 */
 }
 
 .modal-content {
@@ -131,7 +239,7 @@ const handleImageLoad = () => {
 
 .lot-content {
   font-size: 2rem;
-  line-height: 2;
+  line-height: 1.8;
   color: #333;
   margin: 20px 0;
   padding: 25px;
@@ -140,6 +248,7 @@ const handleImageLoad = () => {
   border-left: 4px solid #8B4513;
   font-weight: bold;
   text-align: center;
+  white-space: pre-line;
 }
 
 .descriptions {
@@ -215,6 +324,8 @@ h3 {
 .interpretation-content {
   white-space: pre-wrap;
   line-height: 1.8;
+  scroll-behavior: smooth;
+  padding-bottom: 20px; /* 添加底部内边距，防止文字太靠近底部 */
 }
 
 .loading-text {
@@ -246,5 +357,35 @@ h3 {
 
 .lot-detail-modal::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding: 20px 0;
+}
+
+.action-button {
+  padding: 10px 30px;
+  font-size: 1.2rem;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #8B4513, #A0522D);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #A0522D, #8B4513);
+}
+
+.action-button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 </style> 
