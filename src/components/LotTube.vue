@@ -88,6 +88,26 @@ const handleScreenClick = () => {
   padding: 20px;
   min-height: 20px;
   margin-top: 220%;
+  cursor: pointer;
+  animation: floatTube 3s ease-in-out infinite, glowEffect 2s ease-in-out infinite;
+}
+
+@keyframes floatTube {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes glowEffect {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));
+  }
 }
 
 .papers-container {
@@ -98,6 +118,15 @@ const handleScreenClick = () => {
   align-items: center;
   justify-content: center;
   transform: translateY(-50%);
+  transition: all 0.3s ease;
+}
+
+.lot-tube:hover .papers-container {
+  transform: translateY(-55%);
+}
+
+.lot-tube:hover .paper {
+  filter: brightness(1.1);
 }
 
 .barrel-back {
