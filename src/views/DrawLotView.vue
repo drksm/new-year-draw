@@ -19,13 +19,8 @@
       <div v-if="lotStore.currentLot" class="result-section">
         <LotDetailModal 
           :lot="lotStore.currentLot" 
-          :interpretation="interpretation"
+          v-model:interpretation="interpretation"
         />
-        <div v-if="!interpretation" class="action-buttons">
-          <button class="action-button interpret" @click="handleShowInterpretation">
-            解签
-          </button>
-        </div>
       </div>
     </Transition>
   </div>
@@ -36,12 +31,11 @@ import { ref } from 'vue'
 import { useLotStore } from '../stores/lotStore'
 import LotTube from '../components/LotTube.vue'
 import LotDetailModal from '../components/LotDetailModal.vue'
-import { drawLot, interpretLot } from '../api/lotService'
+import { drawLot } from '../api/lotService'
 
 const lotStore = useLotStore()
 const interpretation = ref(null)
 const isStarted = ref(false)
-const currentRequest = ref(null)
 
 const handleLotSelect = async (index) => {
   try {
@@ -59,52 +53,6 @@ const handleLotSelect = async (index) => {
   }
 }
 
-const handleShowInterpretation = async () => {
-  // 如果有正在进行的请求，先中止它
-  if (currentRequest.value) {
-    currentRequest.value.abort()
-    currentRequest.value = null
-  }
-
-  // 立即设置加载状态
-  interpretation.value = '正在解签中...'
-  
-  // 构建完整的签文内容
-  const lot = lotStore.currentLot
-  const descriptions = [
-    lot.description1,
-    lot.description2,
-    lot.description3
-  ].filter(Boolean).join('\n')
-  
-  const content = `我这次抽的签是，${lot.title}\n${lot.content}\n参考如下：\n${descriptions}`
-  
-  // 设置超时处理
-  const timeoutId = setTimeout(() => {
-    if (interpretation.value === '正在解签中...') {  // 只有在还在加载状态时才显示超时
-      interpretation.value = '解签超时，请稍后重试。\n\n可能的原因：\n1. 网络连接不稳定\n2. 服务器响应较慢\n\n您可以点击"重新解签"再次尝试。'
-      if (currentRequest.value) {
-        currentRequest.value.abort()
-        currentRequest.value = null
-      }
-    }
-  }, 30000)
-
-  try {
-    // 发起解签请求
-    currentRequest.value = await interpretLot(content, (text) => {
-      clearTimeout(timeoutId)
-      // 确保新的文本内容不为空再更新
-      if (text && text.trim()) {
-        interpretation.value = text
-      }
-    })
-  } catch (error) {
-    clearTimeout(timeoutId)
-    interpretation.value = `解签失败：${error.message}\n\n您可以点击"重新解签"再次尝试。`
-  }
-}
-
 const handleStart = () => {
   isStarted.value = true
   lotStore.clearCurrentLot()
@@ -112,12 +60,6 @@ const handleStart = () => {
 }
 
 const handleReset = () => {
-  // 如果有正在进行的请求，先中止它
-  if (currentRequest.value) {
-    currentRequest.value.abort()
-    currentRequest.value = null
-  }
-  
   isStarted.value = true
   lotStore.clearCurrentLot()
   interpretation.value = null

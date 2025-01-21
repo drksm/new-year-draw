@@ -26,12 +26,19 @@
           </div>
         </div>
       </div>
+
+      <div v-if="!interpretation" class="action-buttons">
+        <button class="action-button interpret" @click="handleShowInterpretation">
+          解签
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { interpretLot } from '../api/lotService'
 
 const props = defineProps({
   lot: {
@@ -44,7 +51,10 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['update:interpretation'])
+
 const imageLoaded = ref(false)
+const currentRequest = ref(null)
 
 const handleImageLoad = () => {
   imageLoaded.value = true
@@ -54,6 +64,52 @@ const formatContent = (content) => {
   if (!content) return ''
   // 先替换所有标点符号为标点+换行，然后通过 split 和 filter 去除空行，最后用单个换行符重新连接
   return content.replace(/[，。；！]/g, '$&\n').split('\n').filter(line => line.trim()).join('\n')
+}
+
+const handleShowInterpretation = async () => {
+  // 如果有正在进行的请求，先中止它
+  if (currentRequest.value) {
+    currentRequest.value.abort()
+    currentRequest.value = null
+  }
+
+  // 立即设置加载状态
+  emit('update:interpretation', '正在解签中...')
+  
+  // 构建完整的签文内容
+  const lot = props.lot
+  const descriptions = [
+    lot.description1,
+    lot.description2,
+    lot.description3
+  ].filter(Boolean).join('\n')
+  
+  const content = `我这次抽的签是，${lot.title}\n${lot.content}\n参考如下：\n${descriptions}`
+  
+  // 设置超时处理
+  const timeoutId = setTimeout(() => {
+    if (props.interpretation === '正在解签中...') {  // 只有在还在加载状态时才显示超时
+      emit('update:interpretation', '解签超时，请稍后重试。\n\n可能的原因：\n1. 网络连接不稳定\n2. 服务器响应较慢\n\n您可以点击"重新解签"再次尝试。')
+      if (currentRequest.value) {
+        currentRequest.value.abort()
+        currentRequest.value = null
+      }
+    }
+  }, 30000)
+
+  try {
+    // 发起解签请求
+    currentRequest.value = await interpretLot(content, (text) => {
+      clearTimeout(timeoutId)
+      // 确保新的文本内容不为空再更新
+      if (text && text.trim()) {
+        emit('update:interpretation', text)
+      }
+    })
+  } catch (error) {
+    clearTimeout(timeoutId)
+    emit('update:interpretation', `解签失败：${error.message}\n\n您可以点击"重新解签"再次尝试。`)
+  }
 }
 </script>
 
@@ -256,5 +312,35 @@ h3 {
 
 .lot-detail-modal::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding: 20px 0;
+}
+
+.action-button {
+  padding: 10px 30px;
+  font-size: 1.2rem;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #8B4513, #A0522D);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #A0522D, #8B4513);
+}
+
+.action-button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 </style> 
