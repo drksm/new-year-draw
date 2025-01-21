@@ -28,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useLotStore } from '../stores/lotStore'
 import LotTube from '../components/LotTube.vue'
 import LotDetailModal from '../components/LotDetailModal.vue'
@@ -118,6 +118,28 @@ const handleReset = () => {
   lotStore.clearCurrentLot()
   interpretation.value = null
 }
+
+// 监听当前签文变化，当有签文时上报抽签结果页面 PV
+watch(() => lotStore.currentLot, (newLot) => {
+  if (newLot) {
+    try {
+      window.clarity?.("set", "DrawLotResult", new Date().toISOString());
+      console.log('Clarity PV tracked: DrawLotResult');
+    } catch (error) {
+      console.warn('Clarity PV tracking failed:', error);
+    }
+  }
+})
+
+onMounted(() => {
+  try {
+    // 上报抽签筒子页面 PV
+    window.clarity?.("set", "DrawLotTube", new Date().toISOString());
+    console.log('Clarity PV tracked: DrawLotTube');
+  } catch (error) {
+    console.warn('Clarity PV tracking failed:', error);
+  }
+})
 </script>
 
 <style scoped>
