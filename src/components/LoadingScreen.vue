@@ -11,26 +11,34 @@
       <div v-if="progress < 100" class="loading-progress">
         <div class="progress-bar" :style="{ width: progress + '%' }"></div>
       </div>
-      <div v-else class="button-container">
-        <button 
-          class="enter-button"
-          @click="enterSite"
-        >
-          <div class="button-text">
-            <p class="typing-text" :class="{ 'typing-done': isFirstLineTyped }">
-              <span v-for="(char, index) in firstLine" :key="index" 
-                    :style="{ animationDelay: `${index * 0.1}s` }">
-                {{ char }}
-              </span>
-            </p>
-            <p class="typing-text" :class="{ 'typing-done': isSecondLineTyped }" v-if="isFirstLineTyped">
-              <span v-for="(char, index) in secondLine" :key="index"
-                    :style="{ animationDelay: `${index * 0.1}s` }">
-                {{ char }}
-              </span>
-            </p>
-          </div>
-        </button>
+      <div v-else-if="isFirstLineTyped" class="guidance-container">
+        <div class="guidance-text">
+          <p v-for="(char, index) in firstLine" 
+             :key="`first-${index}`"
+             :style="{ 
+               animationDelay: `${index * 0.1}s`,
+               opacity: 0
+             }"
+             class="char"
+          >
+            {{ char }}
+          </p>
+        </div>
+        <div class="guidance-text" v-if="isSecondLineTyped">
+          <p v-for="(char, index) in secondLine" 
+             :key="`second-${index}`"
+             :style="{ 
+               animationDelay: `${index * 0.1}s`,
+               opacity: 0
+             }"
+             class="char"
+          >
+            {{ char }}
+          </p>
+        </div>
+        <div class="hint-text fade-in" v-if="isSecondLineTyped" @click="enterSite">
+          点击继续
+        </div>
       </div>
     </template>
     
@@ -59,7 +67,7 @@ const showAudioModal = ref(false)
 const isFirstLineTyped = ref(false)
 const isSecondLineTyped = ref(ref(false))
 const firstLine = "在这里，你可以沉浸于宁静的抽签与祈愿之旅，感受心灵的慰藉与希望的曙光。"
-const secondLine = "点击任意键，开启你的专属祈愿时刻，让美好如约而至。"
+const secondLine = "开启你的专属祈愿时刻，让美好如约而至。"
 
 const handleLogin = async () => {
   try {
@@ -86,6 +94,13 @@ const handleAudioConfirm = (allowed) => {
     store.setMusicEnabled(true)
     store.playBackgroundMusic()
   }
+  // 在音频确认后开始文字动画
+  setTimeout(() => {
+    isFirstLineTyped.value = true
+    setTimeout(() => {
+      isSecondLineTyped.value = true
+    }, firstLine.length * 100 + 500)
+  }, 500)
 }
 
 const startLoading = () => {
@@ -113,25 +128,13 @@ const retryLogin = async () => {
 }
 
 const enterSite = () => {
-  router.replace({ name: 'draw' })
+  router.replace({ name: 'guidance' })
 }
 
 onMounted(async () => {
   const success = await handleLogin()
   if (success) {
     startLoading()
-  }
-})
-
-// 在进度达到100%后开始打字效果
-watch(progress, (newValue) => {
-  if (newValue >= 100) {
-    setTimeout(() => {
-      isFirstLineTyped.value = true
-      setTimeout(() => {
-        isSecondLineTyped.value = true
-      }, firstLine.length * 100 + 500) // 第一行打完后等待500ms再开始第二行
-    }, 500) // 进度条完成后等待500ms开始打字
   }
 })
 </script>
@@ -319,5 +322,75 @@ watch(progress, (newValue) => {
 .enter-button {
   position: relative;
   z-index: 1;
+}
+
+.mountains.blur {
+  filter: blur(5px);
+}
+
+.guidance-container {
+  position: relative;
+  z-index: 2;
+  max-width: 800px;
+  padding: 20px;
+  text-align: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 15px;
+  margin: 0 20px;
+}
+
+.guidance-text {
+  font-size: 1.2rem;
+  line-height: 1.8;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.char {
+  opacity: 0;
+  animation: charFadeIn 1s forwards;
+  margin: 0 1px;
+}
+
+.hint-text {
+  margin-top: 30px;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  animation: breathing 2s infinite;
+  cursor: pointer;
+}
+
+@keyframes charFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes breathing {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 1s forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style> 
