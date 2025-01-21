@@ -3,6 +3,7 @@
     <div class="mountain-background">
       <img src="../../public/img/splash.jpg" alt="Mountain Background" class="mountains">
     </div>
+    <h1 class="main-title">慧心签语</h1>
     <div v-if="error" class="error-container">
       <div class="error-message">{{ error }}</div>
       <button class="retry-button" @click="retryLogin">重试</button>
@@ -392,5 +393,25 @@ onMounted(async () => {
   to {
     opacity: 1;
   }
+}
+
+.main-title {
+  position: absolute;
+  z-index: 2;
+  color: #8B4513;
+  font-size: 2.8rem;
+  font-weight: normal;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 80px;
+  text-shadow: 2px 2px 8px rgba(255, 215, 0, 0.3);
+  font-family: "华文行楷", "楷体", "STKaiti", "KaiTi", sans-serif;
+  margin: 0;
+  letter-spacing: 4px;
+  -webkit-text-stroke: 1px #4a2410;
+  background: linear-gradient(to bottom, #8B4513, #654321);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  white-space: nowrap;
 }
 </style> 

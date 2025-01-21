@@ -1,7 +1,7 @@
 <template>
   <div class="guidance-view" @click="handleClick">
     <div class="mountain-background">
-      <img src="../../public/img/splash.jpg" alt="Mountain Background" class="mountains blur">
+      <img src="../../public/img/introduction.jpg" alt="Mountain Background" class="mountains blur">
     </div>
     
     <div class="guidance-container">
@@ -19,7 +19,7 @@
         </p>
       </div>
       <div v-if="isGuidanceFinished" class="hint-text fade-in">
-        点击任意处继续
+        点击抽签
       </div>
     </div>
   </div>
@@ -30,7 +30,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const guidanceText = "踏入这宁静的寺庙，心灵已归于宁静。请闭紧双眼，将心中所求、所惑默念于心。让虔诚的祈愿化作一缕轻烟，飘向佛前。此刻，放下杂念，以纯净之心轻触签筒，佛祖的指引即将降临，为你的新年带来一份祥瑞与解答。"
+const guidanceText = "心灵归于宁静，请闭紧双眼，将心中所求、所惑默念于心。让虔诚的祈愿化作一缕轻烟，飘向佛前。此刻，放下杂念，以纯净之心轻触签筒，佛祖的指引即将降临，为你的新年带来一份祥瑞与解答。"
 const showGuidance = ref(false)
 const isGuidanceFinished = ref(false)
 
