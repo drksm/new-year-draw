@@ -6,6 +6,10 @@
 
     <Transition name="fade">
       <div v-if="!lotStore.currentLot" class="draw-section">
+        <div class="guidance-text" v-if="!isStarted">
+          <div class="text-line">诚心抽一支签，</div>
+          <div class="text-line">让我为您解开心中疑惑。</div>
+        </div>
         <LotTube 
           :onSelect="handleLotSelect"
           :isStarted="isStarted"
@@ -171,5 +175,58 @@ const handleReset = () => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.guidance-text {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 10;
+  width: 100%;
+}
+
+.text-line {
+  font-size: 1.8rem;
+  color: #FFD700;
+  margin: 0.5rem 0;
+  font-weight: 500;
+  text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  transform: translateY(20px);
+  padding: 5px 15px;
+  border-radius: 20px;
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.text-line:nth-child(1) {
+  animation: fadeInUp 1.5s ease forwards, float 3s ease-in-out 1.5s infinite;
+}
+
+.text-line:nth-child(2) {
+  animation: fadeInUp 1.5s ease forwards 0.5s, float 3s ease-in-out 2s infinite;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style> 
