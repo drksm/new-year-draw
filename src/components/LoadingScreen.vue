@@ -137,6 +137,12 @@ onMounted(async () => {
   if (success) {
     startLoading()
   }
+  try {
+    window.clarity?.("set", "LoadingScreen", new Date().toISOString());
+    console.log('Clarity PV tracked: LoadingScreen');
+  } catch (error) {
+    console.warn('Clarity PV tracking failed:', error);
+  }
 })
 </script>
 

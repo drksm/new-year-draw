@@ -117,4 +117,18 @@ watch(() => props.interpretation, (newValue) => {
     font-size: 1rem;
   }
 }
-</style> 
+</style>
+
+<script>
+export default {
+  name: 'InterpretationModal',
+  mounted() {
+    try {
+      window.clarity?.("set", "InterpretationModal", new Date().toISOString());
+      console.log('Clarity PV tracked: InterpretationModal');
+    } catch (error) {
+      console.warn('Clarity PV tracking failed:', error);
+    }
+  },
+}
+</script> 
