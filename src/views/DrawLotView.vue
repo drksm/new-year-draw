@@ -1,5 +1,9 @@
 <template>
   <div class="draw-lot-view">
+    <div class="mountain-background">
+      <img src="../../public/img/lotview.jpg" alt="Mountain Background" class="mountains blur">
+    </div>
+
     <Transition name="fade">
       <div v-if="!lotStore.currentLot" class="draw-section">
         <LotTube 
@@ -128,11 +132,49 @@ const handleReset = () => {
   align-items: center;
   justify-content: flex-start;
   padding: 20px;
-  background: linear-gradient(135deg, #fff5e6 0%, #fff9f0 100%);
+  position: relative;
 }
 
-.draw-section, .result-section {
+.mountain-background {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mountains {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.mountains.blur {
+  filter: blur(2px);
+}
+
+.draw-section {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.result-section {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
