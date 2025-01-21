@@ -17,7 +17,7 @@
 
       <div v-if="interpretation" class="lot-interpretation">
         <h3>解签</h3>
-        <div class="interpretation-content">
+        <div class="interpretation-content" ref="interpretationContent">
           <div v-if="interpretation === '正在解签中...'" class="loading-text">
             {{ interpretation }}
           </div>
@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { interpretLot } from '../api/lotService'
 
 const props = defineProps({
@@ -55,6 +55,7 @@ const emit = defineEmits(['update:interpretation'])
 
 const imageLoaded = ref(false)
 const currentRequest = ref(null)
+const interpretationContent = ref(null)
 
 const handleImageLoad = () => {
   imageLoaded.value = true
@@ -111,6 +112,46 @@ const handleShowInterpretation = async () => {
     emit('update:interpretation', `解签失败：${error.message}\n\n您可以点击"重新解签"再次尝试。`)
   }
 }
+
+// 添加防抖函数
+const debounce = (fn, delay) => {
+  let timeoutId = null
+  return (...args) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+    timeoutId = setTimeout(() => {
+      fn.apply(null, args)
+    }, delay)
+  }
+}
+
+// 优化的滚动函数
+const smoothScrollToBottom = debounce(() => {
+  const modalElement = document.querySelector('.lot-detail-modal')
+  if (!modalElement) return
+
+  const currentScroll = modalElement.scrollTop
+  const targetScroll = modalElement.scrollHeight - modalElement.clientHeight
+  
+  // 如果已经接近底部，不需要滚动
+  if (targetScroll - currentScroll < 50) return
+  
+  // 如果距离底部较远，使用平滑滚动
+  modalElement.scrollTo({
+    top: targetScroll,
+    behavior: 'smooth'
+  })
+}, 100)
+
+// 修改监听器
+watch(() => props.interpretation, (newVal, oldVal) => {
+  if (newVal && newVal !== oldVal && newVal !== '正在解签中...') {
+    nextTick(() => {
+      smoothScrollToBottom()
+    })
+  }
+}, { immediate: false })
 </script>
 
 <style scoped>
@@ -127,6 +168,8 @@ const handleShowInterpretation = async () => {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
+  scroll-behavior: smooth;
+  overscroll-behavior: none; /* 防止过度滚动 */
 }
 
 .modal-content {
@@ -281,6 +324,8 @@ h3 {
 .interpretation-content {
   white-space: pre-wrap;
   line-height: 1.8;
+  scroll-behavior: smooth;
+  padding-bottom: 20px; /* 添加底部内边距，防止文字太靠近底部 */
 }
 
 .loading-text {
