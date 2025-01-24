@@ -59,8 +59,8 @@ const handleSelect = (index) => {
   if (selectedIndex.value !== null || isShaking.value) return
   isShaking.value = true
   
-  // 立即播放抽签音效
-  musicStore.playDrawSound()
+  // 立即播放抽签音效,有点难听，先删了
+  // musicStore.playDrawSound()
   
   setTimeout(() => {
     isShaking.value = false
@@ -86,25 +86,54 @@ const handleScreenClick = () => {
   justify-content: center;
   gap: 20px;
   padding: 20px;
-  min-height: 800px;
-  margin-top: 20%;
+  min-height: 20px;
+  margin-top: 220%;
+  cursor: pointer;
+  animation: floatTube 3s ease-in-out infinite, glowEffect 2s ease-in-out infinite;
+}
+
+@keyframes floatTube {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes glowEffect {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));
+  }
 }
 
 .papers-container {
   position: relative;
-  width: 1000px;
-  height: 1000px;
+  width: 5x;
+  height: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
   transform: translateY(-50%);
+  transition: all 0.3s ease;
+}
+
+.lot-tube:hover .papers-container {
+  transform: translateY(-55%);
+}
+
+.lot-tube:hover .paper {
+  filter: brightness(1.1);
 }
 
 .barrel-back {
   position: absolute;
   bottom: -100px;
   left: 50%;
-  transform: translateX(-50%) scale(1.1);
+  transform: translateX(-50%) scale(0.8);
   z-index: 0;
   opacity: 1;
   margin-bottom: 20px;
@@ -114,7 +143,7 @@ const handleScreenClick = () => {
   position: absolute;
   bottom: -100px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(0.7);
   z-index: 1000;
   opacity: 1;
 }
@@ -135,8 +164,8 @@ const handleScreenClick = () => {
 
 .paper {
   position: absolute;
-  width: 80px;
-  height: 320px;
+  width: 40px;
+  height: 140px;
   background-color: #FFE4B5;
   border: 1px solid #DEB887;
   border-radius: 4px;
@@ -152,38 +181,38 @@ const handleScreenClick = () => {
   transform: var(--hover-transform);
 }
 
-.paper-1 { --initial-transform: translateX(-35px) rotate(-12deg); --hover-transform: translateX(-35px) rotate(-12deg) translateY(-20px); z-index: 1; }
-.paper-2 { --initial-transform: translateX(-25px) rotate(-8deg); --hover-transform: translateX(-25px) rotate(-8deg) translateY(-20px); z-index: 2; }
-.paper-3 { --initial-transform: translateX(-15px) rotate(-4deg); --hover-transform: translateX(-15px) rotate(-4deg) translateY(-20px); z-index: 3; }
-.paper-4 { --initial-transform: translateX(-5px) rotate(-2deg); --hover-transform: translateX(-5px) rotate(-2deg) translateY(-20px); z-index: 4; }
-.paper-5 { --initial-transform: translateX(5px) rotate(2deg); --hover-transform: translateX(5px) rotate(2deg) translateY(-20px); z-index: 5; }
-.paper-6 { --initial-transform: translateX(15px) rotate(4deg); --hover-transform: translateX(15px) rotate(4deg) translateY(-20px); z-index: 6; }
-.paper-7 { --initial-transform: translateX(25px) rotate(8deg); --hover-transform: translateX(25px) rotate(8deg) translateY(-20px); z-index: 7; }
-.paper-8 { --initial-transform: translateX(35px) rotate(12deg); --hover-transform: translateX(35px) rotate(12deg) translateY(-20px); z-index: 8; }
+.paper-1 { --initial-transform: translateX(-20px) rotate(-12deg); --hover-transform: translateX(-20px) rotate(-12deg) translateY(-10px); z-index: 1; }
+.paper-2 { --initial-transform: translateX(-15px) rotate(-8deg); --hover-transform: translateX(-15px) rotate(-8deg) translateY(-10px); z-index: 2; }
+.paper-3 { --initial-transform: translateX(-10px) rotate(-4deg); --hover-transform: translateX(-10px) rotate(-4deg) translateY(-10px); z-index: 3; }
+.paper-4 { --initial-transform: translateX(-5px) rotate(-2deg); --hover-transform: translateX(-5px) rotate(-2deg) translateY(-10px); z-index: 4; }
+.paper-5 { --initial-transform: translateX(5px) rotate(2deg); --hover-transform: translateX(5px) rotate(2deg) translateY(-10px); z-index: 5; }
+.paper-6 { --initial-transform: translateX(10px) rotate(4deg); --hover-transform: translateX(10px) rotate(4deg) translateY(-10px); z-index: 6; }
+.paper-7 { --initial-transform: translateX(15px) rotate(8deg); --hover-transform: translateX(15px) rotate(8deg) translateY(-10px); z-index: 7; }
+.paper-8 { --initial-transform: translateX(20px) rotate(12deg); --hover-transform: translateX(20px) rotate(12deg) translateY(-10px); z-index: 8; }
 
 @keyframes shakeBarrel {
-  0%, 100% { transform: translateX(-50%) scale(1.1) translateY(0); }
-  25% { transform: translateX(-50%) scale(1.1) translateY(-15px); }
-  75% { transform: translateX(-50%) scale(1.1) translateY(15px); }
+  0%, 100% { transform: translateX(-50%) scale(0.8) translateY(0); }
+  25% { transform: translateX(-50%) scale(0.8) translateY(-8px); }
+  75% { transform: translateX(-50%) scale(0.8) translateY(8px); }
 }
 
 @keyframes shakeBarrelFront {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  25% { transform: translateX(-50%) translateY(-15px); }
-  75% { transform: translateX(-50%) translateY(15px); }
+  0%, 100% { transform: translateX(-50%) scale(0.7) translateY(0); }
+  25% { transform: translateX(-50%) scale(0.7) translateY(-8px); }
+  75% { transform: translateX(-50%) scale(0.7) translateY(8px); }
 }
 
 @keyframes shakePapers {
   0%, 100% { transform: var(--initial-transform) translateY(0); }
-  25% { transform: var(--initial-transform) translateY(-40px); }
-  75% { transform: var(--initial-transform) translateY(40px); }
+  25% { transform: var(--initial-transform) translateY(-20px); }
+  75% { transform: var(--initial-transform) translateY(20px); }
 }
 
 @keyframes flyAway {
   0% { transform: var(--initial-transform); }
-  15% { transform: var(--initial-transform) translateY(-50px); }
-  30% { transform: var(--initial-transform) translateY(-150px); }
-  100% { transform: var(--initial-transform) translateY(-2000px); }
+  15% { transform: var(--initial-transform) translateY(-30px); }
+  30% { transform: var(--initial-transform) translateY(-80px); }
+  100% { transform: var(--initial-transform) translateY(-500px); }
 }
 
 .barrel-back.shaking {

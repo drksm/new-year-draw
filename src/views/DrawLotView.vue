@@ -1,7 +1,15 @@
 <template>
   <div class="draw-lot-view">
+    <div class="mountain-background">
+      <img src="../../public/img/lotview.jpg" alt="Mountain Background" class="mountains blur">
+    </div>
+
     <Transition name="fade">
       <div v-if="!lotStore.currentLot" class="draw-section">
+        <div class="guidance-text" v-if="!isStarted">
+          <div class="text-line">诚心抽一支签，</div>
+          <div class="text-line">让我为您解开心中疑惑。</div>
+        </div>
         <LotTube 
           :onSelect="handleLotSelect"
           :isStarted="isStarted"
@@ -15,13 +23,8 @@
       <div v-if="lotStore.currentLot" class="result-section">
         <LotDetailModal 
           :lot="lotStore.currentLot" 
-          :interpretation="interpretation"
+          v-model:interpretation="interpretation"
         />
-        <div v-if="!interpretation" class="action-buttons">
-          <button class="action-button interpret" @click="handleShowInterpretation">
-            解签
-          </button>
-        </div>
       </div>
     </Transition>
   </div>
@@ -32,12 +35,11 @@ import { ref, onMounted, watch } from 'vue'
 import { useLotStore } from '../stores/lotStore'
 import LotTube from '../components/LotTube.vue'
 import LotDetailModal from '../components/LotDetailModal.vue'
-import { drawLot, interpretLot } from '../api/lotService'
+import { drawLot } from '../api/lotService'
 
 const lotStore = useLotStore()
 const interpretation = ref(null)
 const isStarted = ref(false)
-const currentRequest = ref(null)
 
 const handleLotSelect = async (index) => {
   try {
@@ -55,52 +57,6 @@ const handleLotSelect = async (index) => {
   }
 }
 
-const handleShowInterpretation = async () => {
-  // 如果有正在进行的请求，先中止它
-  if (currentRequest.value) {
-    currentRequest.value.abort()
-    currentRequest.value = null
-  }
-
-  // 立即设置加载状态
-  interpretation.value = '正在解签中...'
-  
-  // 构建完整的签文内容
-  const lot = lotStore.currentLot
-  const descriptions = [
-    lot.description1,
-    lot.description2,
-    lot.description3
-  ].filter(Boolean).join('\n')
-  
-  const content = `我这次抽的签是，${lot.title}\n${lot.content}\n参考如下：\n${descriptions}`
-  
-  // 设置超时处理
-  const timeoutId = setTimeout(() => {
-    if (interpretation.value === '正在解签中...') {  // 只有在还在加载状态时才显示超时
-      interpretation.value = '解签超时，请稍后重试。\n\n可能的原因：\n1. 网络连接不稳定\n2. 服务器响应较慢\n\n您可以点击"重新解签"再次尝试。'
-      if (currentRequest.value) {
-        currentRequest.value.abort()
-        currentRequest.value = null
-      }
-    }
-  }, 30000)
-
-  try {
-    // 发起解签请求
-    currentRequest.value = await interpretLot(content, (text) => {
-      clearTimeout(timeoutId)
-      // 确保新的文本内容不为空再更新
-      if (text && text.trim()) {
-        interpretation.value = text
-      }
-    })
-  } catch (error) {
-    clearTimeout(timeoutId)
-    interpretation.value = `解签失败：${error.message}\n\n您可以点击"重新解签"再次尝试。`
-  }
-}
-
 const handleStart = () => {
   isStarted.value = true
   lotStore.clearCurrentLot()
@@ -108,12 +64,6 @@ const handleStart = () => {
 }
 
 const handleReset = () => {
-  // 如果有正在进行的请求，先中止它
-  if (currentRequest.value) {
-    currentRequest.value.abort()
-    currentRequest.value = null
-  }
-  
   isStarted.value = true
   lotStore.clearCurrentLot()
   interpretation.value = null
@@ -150,20 +100,63 @@ onMounted(() => {
   align-items: center;
   justify-content: flex-start;
   padding: 20px;
-  background: linear-gradient(135deg, #fff5e6 0%, #fff9f0 100%);
+  position: relative;
 }
 
-.draw-section, .result-section {
+.mountain-background {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mountains {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.mountains.blur {
+  filter: blur(2px);
+}
+
+.draw-section {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
 }
 
+.result-section {
+  position: fixed;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  max-width: 800px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
 .action-buttons {
   display: flex;
   gap: 16px;
+  width: 100%;
   margin-top: 20px;
   margin-bottom: 20px;
 }
@@ -204,5 +197,58 @@ onMounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.guidance-text {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 10;
+  width: 100%;
+}
+
+.text-line {
+  font-size: 1.8rem;
+  color: #FFD700;
+  margin: 0.5rem 0;
+  font-weight: 500;
+  text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  transform: translateY(20px);
+  padding: 5px 15px;
+  border-radius: 20px;
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.text-line:nth-child(1) {
+  animation: fadeInUp 1.5s ease forwards, float 3s ease-in-out 1.5s infinite;
+}
+
+.text-line:nth-child(2) {
+  animation: fadeInUp 1.5s ease forwards 0.5s, float 3s ease-in-out 2s infinite;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style> 
