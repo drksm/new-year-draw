@@ -85,7 +85,7 @@ export const interpretLot = (lotContent, onProgress) => {
       },
       body: JSON.stringify({
         messages: [
-          {"role": "system", "content": "你是一位专业的解签师，请根据抽到的签文内容为用户解签"},
+          {"role": "system", "content": "你是一位专业的解签师，请根据抽到的签文内容为用户解签，我需要你根据用户的八字和参考信息来分析，但是不要直接转述参考内容，需要用口语口气来回答"},
           {"role": "user", "content": lotContent}
         ]
       }),

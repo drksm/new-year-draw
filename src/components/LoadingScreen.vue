@@ -12,33 +12,44 @@
       <div v-if="progress < 100" class="loading-progress">
         <div class="progress-bar" :style="{ width: progress + '%' }"></div>
       </div>
-      <div v-else-if="isFirstLineTyped" class="guidance-container">
-        <div class="guidance-text">
-          <p v-for="(char, index) in firstLine" 
-             :key="`first-${index}`"
-             :style="{ 
-               animationDelay: `${index * 0.1}s`,
-               opacity: 0
-             }"
-             class="char"
-          >
-            {{ char }}
-          </p>
-        </div>
-        <div class="guidance-text" v-if="isSecondLineTyped">
-          <p v-for="(char, index) in secondLine" 
-             :key="`second-${index}`"
-             :style="{ 
-               animationDelay: `${index * 0.1}s`,
-               opacity: 0
-             }"
-             class="char"
-          >
-            {{ char }}
-          </p>
-        </div>
-        <div class="hint-text fade-in" v-if="isSecondLineTyped" @click="enterSite">
-          点击继续
+      <div v-else>
+        <!-- 八字收集表单 -->
+        <Transition name="fade">
+          <BirthInfoForm 
+            v-if="showBirthForm"
+            @submit="handleBirthInfoSubmit"
+          />
+        </Transition>
+        
+        <!-- 引导文字 -->
+        <div v-if="!showBirthForm && isFirstLineTyped" class="guidance-container">
+          <div class="guidance-text">
+            <p v-for="(char, index) in firstLine" 
+               :key="`first-${index}`"
+               :style="{ 
+                 animationDelay: `${index * 0.1}s`,
+                 opacity: 0
+               }"
+               class="char"
+            >
+              {{ char }}
+            </p>
+          </div>
+          <div class="guidance-text" v-if="isSecondLineTyped">
+            <p v-for="(char, index) in secondLine" 
+               :key="`second-${index}`"
+               :style="{ 
+                 animationDelay: `${index * 0.1}s`,
+                 opacity: 0
+               }"
+               class="char"
+            >
+              {{ char }}
+            </p>
+          </div>
+          <div class="hint-text fade-in" v-if="isSecondLineTyped" @click="enterSite">
+            点击继续
+          </div>
         </div>
       </div>
     </template>
@@ -55,20 +66,24 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMusicStore } from '@/stores/musicStore'
 import { useAuthStore } from '../stores/authStore'
+import { useBirthInfoStore } from '../stores/birthInfoStore'
 import { login } from '../api/authService'
 import AudioConfirmModal from './AudioConfirmModal.vue'
+import BirthInfoForm from './BirthInfoForm.vue'
 
 const router = useRouter()
 const progress = ref(0)
 const store = useMusicStore()
 const authStore = useAuthStore()
+const birthInfoStore = useBirthInfoStore()
 const isLoading = ref(true)
 const error = ref(null)
 const showAudioModal = ref(false)
+const showBirthForm = ref(false)
 const isFirstLineTyped = ref(false)
-const isSecondLineTyped = ref(ref(false))
+const isSecondLineTyped = ref(false)
 const firstLine = "在这里，你可以沉浸于宁静的抽签与祈愿之旅，感受心灵的慰藉与希望的曙光。"
-const secondLine = "开启你的专属祈愿时刻，让美好如约而至。"
+const secondLine = "点击任意键，开启你的专属祈愿时刻。"
 
 const handleLogin = async () => {
   try {
@@ -95,7 +110,23 @@ const handleAudioConfirm = (allowed) => {
     store.setMusicEnabled(true)
     store.playBackgroundMusic()
   }
-  // 在音频确认后开始文字动画
+  // 加载缓存的生辰八字信息
+  birthInfoStore.loadBirthInfo()
+  // 始终显示表单，让用户确认或修改
+  showBirthForm.value = true
+}
+
+const handleBirthInfoSubmit = (birthInfo) => {
+  console.log('Birth info submitted:', birthInfo)
+  // 保存生辰八字信息
+  birthInfoStore.setBirthInfo(birthInfo)
+  
+  // 隐藏表单，开始显示引导文字
+  showBirthForm.value = false
+  startGuidanceText()
+}
+
+const startGuidanceText = () => {
   setTimeout(() => {
     isFirstLineTyped.value = true
     setTimeout(() => {
@@ -345,6 +376,7 @@ onMounted(async () => {
   background: rgba(0, 0, 0, 0.6);
   border-radius: 15px;
   margin: 0 20px;
+  transition: opacity 0.5s ease;
 }
 
 .guidance-text {
@@ -419,5 +451,21 @@ onMounted(async () => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   white-space: nowrap;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* 确保表单在引导文字容器之上 */
+.birth-info-form {
+  position: relative;
+  z-index: 3;
 }
 </style> 
